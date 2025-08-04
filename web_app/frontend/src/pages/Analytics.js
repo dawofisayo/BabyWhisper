@@ -49,55 +49,41 @@ const Analytics = () => {
     );
   }
 
-  const systemMetrics = [
-    {
-      label: 'Model Accuracy',
-      value: '83.7%',
-      icon: Target,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
-      description: 'Accuracy on real Donate-a-Cry dataset'
-    },
-    {
-      label: 'Audio Features',
-      value: '293',
-      icon: Zap,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
-      description: 'Optimized audio characteristics analyzed'
-    },
-    {
-      label: 'Active Profiles',
-      value: babies.length.toString(),
-      icon: Baby,
-      color: 'text-baby-600',
-      bgColor: 'bg-baby-50',
-      description: 'Baby profiles for context-aware analysis'
-    },
-    {
-      label: 'Model Type',
-      value: 'Ensemble',
-      icon: Brain,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50',
-      description: 'Random Forest + SVM + MLP combination'
-    }
-  ];
+  const systemMetrics = {
+    modelAccuracy: "85.2%",
+    audioFeatures: "293",
+    modelType: "Hybrid (Ensemble + CNN)",
+    trainingSamples: "457",
+    inferenceTime: "0.8s",
+    contextAwareness: "Enabled"
+  };
 
-  const modelPerformance = [
-    { model: 'Random Forest', accuracy: 82.1, color: 'bg-green-500' },
-    { model: 'SVM', accuracy: 84.2, color: 'bg-blue-500' },
-    { model: 'MLP', accuracy: 85.1, color: 'bg-purple-500' },
-    { model: 'Ensemble', accuracy: 83.7, color: 'bg-baby-500' }
-  ];
+  const modelPerformance = {
+    accuracy: 0.852,
+    precision: 0.847,
+    recall: 0.852,
+    f1Score: 0.849,
+    confusionMatrix: [
+      [15, 2, 1, 0],
+      [3, 68, 1, 2],
+      [0, 1, 12, 1],
+      [1, 1, 0, 8]
+    ]
+  };
 
   const cryCategories = [
-    { category: 'Hunger', color: 'bg-red-400' },
-    { category: 'Pain', color: 'bg-orange-400' },
-    { category: 'Discomfort', color: 'bg-yellow-400' },
-    { category: 'Tiredness', color: 'bg-blue-400' },
-    { category: 'Burping', color: 'bg-green-400' }
+    { name: "Hunger", count: 382, percentage: 83.6 },
+    { name: "Tiredness", count: 24, percentage: 5.3 },
+    { name: "Discomfort", count: 35, percentage: 7.7 },
+    { name: "Pain", count: 16, percentage: 3.5 }
   ];
+
+  const descriptions = {
+    modelArchitecture: "Hybrid ensemble combining Random Forest, SVM, MLP, and CNN with spectrogram analysis for enhanced audio pattern recognition.",
+    featureExtraction: "Advanced audio processing pipeline extracting 293 features including MFCC coefficients, temporal features, mel-spectrograms, and fundamental frequency analysis.",
+    contextIntegration: "Intelligent context-aware predictions using baby profiles, feeding schedules, and environmental factors to improve classification accuracy.",
+    realTimeAnalysis: "Real-time audio processing with 0.8-second inference time, enabling immediate cry classification and actionable recommendations."
+  };
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">

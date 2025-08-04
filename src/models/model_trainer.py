@@ -104,15 +104,15 @@ class ModelTrainer:
         
         return np.array(features), np.array(valid_labels)
     
-    def load_donateacry_dataset(self, dataset_path: str = "data/donateacry_corpus_cleaned_and_updated_data") -> Tuple[np.ndarray, np.ndarray]:
+    def load_donateacry_dataset(self, dataset_path: str = "data/donateacry_corpus_cleaned_and_updated_data") -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
-        Load the real Donate-a-Cry dataset.
+        Load the real Donate-a-Cry dataset with both features and spectrograms.
         
         Args:
             dataset_path: Path to the donateacry dataset
             
         Returns:
-            Tuple of (features, labels)
+            Tuple of (features, labels, spectrograms)
         """
         print(f"Loading real baby cry data from {dataset_path}...")
         
@@ -127,11 +127,11 @@ class ModelTrainer:
         
         features_list = []
         labels_list = []
+        spectrograms_list = []
         
         if not os.path.exists(dataset_path):
             print(f"❌ Dataset not found at {dataset_path}")
-            print("🔄 Falling back to synthetic data...")
-            return self.create_synthetic_dataset()
+            raise ValueError("Real dataset not available. Please ensure the Donate-a-Cry dataset is properly set up.")
         
         # Load files from each category
         for folder_name, class_name in class_mapping.items():
@@ -153,12 +153,13 @@ class ModelTrainer:
             # Process each audio file
             for audio_file in tqdm(audio_files, desc=f"Extracting {class_name} features"):
                 try:
-                    # Extract features using our feature extractor
-                    feature_vector = self.feature_extractor.extract_feature_vector(audio_file)
+                    # Extract both features and spectrograms
+                    feature_vector, spectrogram = self.feature_extractor.extract_features_and_spectrograms(audio_file)
                     
-                    if feature_vector is not None and len(feature_vector) > 0:
+                    if feature_vector is not None and len(feature_vector) > 0 and spectrogram is not None:
                         features_list.append(feature_vector)
                         labels_list.append(class_name)
+                        spectrograms_list.append(spectrogram)
                     else:
                         print(f"⚠️  Failed to extract features from {audio_file}")
                         
@@ -167,15 +168,17 @@ class ModelTrainer:
                     continue
         
         if len(features_list) == 0:
-            print("❌ No features extracted from real data, falling back to synthetic")
-            return self.create_synthetic_dataset()
+            print("❌ No features extracted from real data")
+            raise ValueError("No valid features extracted from dataset.")
         
         # Convert to numpy arrays
         features = np.array(features_list)
         labels = np.array(labels_list)
+        spectrograms = np.array(spectrograms_list)
         
         print(f"✅ Loaded {len(features)} real baby cry samples")
         print(f"📊 Feature shape: {features.shape}")
+        print(f"📊 Spectrogram shape: {spectrograms.shape}")
         print(f"🏷️  Classes: {np.unique(labels)}")
         
         # Print class distribution
@@ -184,16 +187,20 @@ class ModelTrainer:
         for class_name, count in class_counts.items():
             print(f"   {class_name}: {count} samples")
         
-        return features, labels
+        return features, labels, spectrograms
     
     def train_ensemble(self, X_train: np.ndarray, y_train: np.ndarray, 
-                      X_val: np.ndarray, y_val: np.ndarray) -> Dict:
+                      X_val: np.ndarray, y_val: np.ndarray,
+                      spectrograms_train: np.ndarray = None,
+                      spectrograms_val: np.ndarray = None) -> Dict:
         """
         Train ensemble of models.
         
         Args:
             X_train, y_train: Training data
             X_val, y_val: Validation data
+            spectrograms_train: Training spectrograms for CNN
+            spectrograms_val: Validation spectrograms for CNN
             
         Returns:
             Training results dictionary
@@ -256,37 +263,76 @@ class ModelTrainer:
                 print(f"     ❌ {model_name} failed: {e}")
                 continue
         
+        # Train CNN if spectrograms are available
+        if spectrograms_train is not None and spectrograms_val is not None:
+            print("   Training CNN...")
+            try:
+                # Create and train CNN
+                classifier = BabyCryClassifier(model_type='cnn')
+                
+                # Reshape spectrograms for CNN (add channel dimension)
+                spectrograms_train_cnn = spectrograms_train.reshape(spectrograms_train.shape[0], spectrograms_train.shape[1], spectrograms_train.shape[2], 1)
+                spectrograms_val_cnn = spectrograms_val.reshape(spectrograms_val.shape[0], spectrograms_val.shape[1], spectrograms_val.shape[2], 1)
+                
+                # Train CNN
+                cnn_results = classifier.fit(X_train, y_train, spectrograms=spectrograms_train_cnn)
+                
+                # Validate CNN
+                val_pred_cnn = classifier.predict(X_val, spectrograms=spectrograms_val_cnn)
+                val_accuracy_cnn = accuracy_score(y_val, val_pred_cnn)
+                
+                self.trained_models['cnn'] = classifier
+                results['cnn'] = {
+                    'validation_accuracy': val_accuracy_cnn,
+                    'model': classifier
+                }
+                
+                print(f"     ✅ CNN: {val_accuracy_cnn:.3f} accuracy")
+                
+            except Exception as e:
+                print(f"     ❌ CNN failed: {e}")
+        
         # Create ensemble
         if len(self.trained_models) >= 2:
             print("   Creating ensemble...")
             
-            ensemble_models = [(name, model) for name, model in self.trained_models.items()]
-            self.ensemble = VotingClassifier(
-                estimators=ensemble_models,
-                voting='soft'
-            )
+            # Only include sklearn models in VotingClassifier
+            sklearn_models = [(name, model) for name, model in self.trained_models.items() 
+                             if name in ['random_forest', 'svm', 'mlp']]
             
-            self.ensemble.fit(X_train_scaled, y_train_encoded)
+            if len(sklearn_models) >= 2:
+                self.ensemble = VotingClassifier(
+                    estimators=sklearn_models,
+                    voting='soft'
+                )
+                
+                self.ensemble.fit(X_train_scaled, y_train_encoded)
+                
+                # Validate ensemble
+                ensemble_pred = self.ensemble.predict(X_val_scaled)
+                ensemble_accuracy = accuracy_score(y_val_encoded, ensemble_pred)
+                
+                results['ensemble'] = {
+                    'validation_accuracy': ensemble_accuracy,
+                    'model': self.ensemble
+                }
+                
+                print(f"     ✅ ensemble: {ensemble_accuracy:.3f} accuracy")
             
-            # Validate ensemble
-            ensemble_pred = self.ensemble.predict(X_val_scaled)
-            ensemble_accuracy = accuracy_score(y_val_encoded, ensemble_pred)
-            
-            results['ensemble'] = {
-                'validation_accuracy': ensemble_accuracy,
-                'model': self.ensemble
-            }
-            
-            print(f"     ✅ ensemble: {ensemble_accuracy:.3f} accuracy")
+            # Handle CNN separately if available
+            if 'cnn' in self.trained_models:
+                print(f"     ✅ CNN included separately (accuracy: {results['cnn']['validation_accuracy']:.3f})")
         
         return results
     
-    def evaluate_models(self, X_test: np.ndarray, y_test: np.ndarray) -> Dict:
+    def evaluate_models(self, X_test: np.ndarray, y_test: np.ndarray, 
+                       spectrograms_test: np.ndarray = None) -> Dict:
         """
         Evaluate trained models on test data.
         
         Args:
             X_test, y_test: Test data
+            spectrograms_test: Test spectrograms for CNN
             
         Returns:
             Evaluation results dictionary
@@ -300,48 +346,28 @@ class ModelTrainer:
         
         # Evaluate individual models
         for model_name, model in self.trained_models.items():
-            try:
-                y_pred = model.predict(X_test_scaled)
-                
-                accuracy = accuracy_score(y_test_encoded, y_pred)
-                precision = precision_score(y_test_encoded, y_pred, average='weighted', zero_division=0)
-                recall = recall_score(y_test_encoded, y_pred, average='weighted', zero_division=0)
-                f1 = f1_score(y_test_encoded, y_pred, average='weighted', zero_division=0)
-                
-                results[model_name] = {
-                    'accuracy': accuracy,
-                    'precision': precision,
-                    'recall': recall,
-                    'f1': f1
-                }
-                
-                print(f"   {model_name}: Acc={accuracy:.3f}, F1={f1:.3f}")
-                
-            except Exception as e:
-                print(f"   ❌ {model_name} evaluation failed: {e}")
-                continue
+            if model_name == 'cnn' and spectrograms_test is not None:
+                # Evaluate CNN with spectrograms
+                spectrograms_test_cnn = spectrograms_test.reshape(spectrograms_test.shape[0], spectrograms_test.shape[1], spectrograms_test.shape[2], 1)
+                test_pred = model.predict(X_test, spectrograms=spectrograms_test_cnn)
+            else:
+                # Evaluate traditional ML models
+                test_pred = model.predict(X_test_scaled)
+            
+            test_accuracy = accuracy_score(y_test, test_pred)
+            results[model_name] = {
+                'test_accuracy': test_accuracy,
+                'predictions': test_pred
+            }
+            print(f"   {model_name}: {test_accuracy:.3f} accuracy")
         
         # Evaluate ensemble
-        if hasattr(self, 'ensemble'):
-            try:
-                y_pred = self.ensemble.predict(X_test_scaled)
-                
-                accuracy = accuracy_score(y_test_encoded, y_pred)
-                precision = precision_score(y_test_encoded, y_pred, average='weighted', zero_division=0)
-                recall = recall_score(y_test_encoded, y_pred, average='weighted', zero_division=0)
-                f1 = f1_score(y_test_encoded, y_pred, average='weighted', zero_division=0)
-                
-                results['ensemble'] = {
-                    'accuracy': accuracy,
-                    'precision': precision,
-                    'recall': recall,
-                    'f1': f1
-                }
-                
-                print(f"   🏆 ensemble: Acc={accuracy:.3f}, F1={f1:.3f}")
-                
-            except Exception as e:
-                print(f"   ❌ ensemble evaluation failed: {e}")
+        if 'ensemble' in self.trained_models:
+            ensemble_pred = self.ensemble.predict(X_test_scaled)
+            ensemble_accuracy = accuracy_score(y_test, ensemble_pred)
+            results['ensemble']['test_accuracy'] = ensemble_accuracy
+            results['ensemble']['predictions'] = ensemble_pred
+            print(f"   ensemble: {ensemble_accuracy:.3f} accuracy")
         
         return results
     
@@ -440,7 +466,7 @@ class ModelTrainer:
         # Load real data
         print("🎯 Loading REAL baby cry data...")
         try:
-            features, labels = self.load_donateacry_dataset()
+            features, labels, spectrograms = self.load_donateacry_dataset()
             data_source = "Real Donate-a-Cry Dataset"
         except Exception as e:
             print(f"❌ Failed to load real data: {e}")
@@ -449,11 +475,16 @@ class ModelTrainer:
         # Rest of training logic remains the same
         X_train, X_test, X_val, y_train, y_test, y_val = self.prepare_data(features, labels)
         
+        # Prepare spectrograms for training/validation
+        spectrograms_train = spectrograms[:len(X_train)]
+        spectrograms_val = spectrograms[len(X_train):len(X_train) + len(X_val)]
+        spectrograms_test = spectrograms[len(X_train) + len(X_val):]
+        
         # Train models
-        results = self.train_ensemble(X_train, y_train, X_val, y_val)
+        results = self.train_ensemble(X_train, y_train, X_val, y_val, spectrograms_train, spectrograms_val)
         
         # Evaluate
-        final_results = self.evaluate_models(X_test, y_test)
+        final_results = self.evaluate_models(X_test, y_test, spectrograms_test)
         
         # Combine results
         training_summary = {
@@ -589,7 +620,7 @@ class ModelTrainer:
         
         # Load real dataset
         try:
-            features, labels = self.load_donateacry_dataset()
+            features, labels, spectrograms = self.load_donateacry_dataset()
             print(f"✅ Loaded {len(features)} samples from real dataset")
         except Exception as e:
             print(f"❌ Failed to load real dataset: {e}")

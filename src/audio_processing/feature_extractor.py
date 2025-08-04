@@ -162,6 +162,55 @@ class AudioFeatureExtractor:
             feature_array = feature_array.flatten()
         return feature_array
     
+    def extract_spectrograms(self, audio_path: str, target_length: int = 130) -> np.ndarray:
+        """
+        Extract mel-spectrograms for CNN analysis.
+        
+        Args:
+            audio_path: Path to audio file
+            target_length: Target time length for spectrogram (default: 130)
+            
+        Returns:
+            Mel-spectrogram array (128, target_length)
+        """
+        # Load audio file
+        y, sr = librosa.load(audio_path, sr=self.sample_rate)
+        
+        # Extract mel-spectrogram
+        mel_spec = librosa.feature.melspectrogram(y=y, sr=sr)
+        
+        # Convert to log scale
+        mel_spec_db = librosa.amplitude_to_db(mel_spec, ref=np.max)
+        
+        # Pad or truncate to target length
+        if mel_spec_db.shape[1] > target_length:
+            # Truncate if too long
+            mel_spec_db = mel_spec_db[:, :target_length]
+        elif mel_spec_db.shape[1] < target_length:
+            # Pad with zeros if too short
+            padding = target_length - mel_spec_db.shape[1]
+            mel_spec_db = np.pad(mel_spec_db, ((0, 0), (0, padding)), mode='constant')
+        
+        # Normalize to [0, 1] range
+        mel_spec_norm = (mel_spec_db - mel_spec_db.min()) / (mel_spec_db.max() - mel_spec_db.min() + 1e-8)
+        
+        return mel_spec_norm
+    
+    def extract_features_and_spectrograms(self, audio_path: str) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Extract both features and spectrograms for hybrid approach.
+        
+        Args:
+            audio_path: Path to audio file
+            
+        Returns:
+            Tuple of (feature_vector, spectrogram)
+        """
+        feature_vector = self.extract_feature_vector(audio_path)
+        spectrogram = self.extract_spectrograms(audio_path)
+        
+        return feature_vector, spectrogram
+    
     def visualize_features(self, audio_path: str, save_path: Optional[str] = None):
         """
         Create visualizations of audio features.

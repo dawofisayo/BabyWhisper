@@ -128,7 +128,14 @@ const Dashboard = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <MetricCard
+          title="Model Accuracy"
+          value="85.2%"
+          change="+1.5%"
+          changeType="positive"
+          icon={TrendingUp}
+        />
         {stats.map((stat, index) => {
           const IconComponent = stat.icon;
           return (

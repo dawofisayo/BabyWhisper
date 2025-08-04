@@ -96,70 +96,37 @@ class BabyWhisperClassifier:
             raise ValueError("No model loaded. Please train a model or load a pre-trained one.")
         
         try:
-            # Extract features from audio
-            features = self.feature_extractor.extract_feature_vector(audio_path)
-            features = features.reshape(1, -1)  # Reshape for single prediction
+            # Extract both features and spectrograms for hybrid model
+            features, spectrograms = self.feature_extractor.extract_features_and_spectrograms(audio_path)
             
-            # Get base prediction from classifier
-            if return_detailed:
-                base_result = self.classifier.classify_with_confidence(features)
-            else:
-                prediction = self.classifier.predict(features)[0]
-                probabilities = self.classifier.predict_proba(features)[0]
-                base_result = {
-                    'prediction': prediction,
-                    'confidence': float(np.max(probabilities)),
-                    'all_probabilities': {
-                        self.classifier.classes[i]: float(prob) 
-                        for i, prob in enumerate(probabilities)
-                    }
-                }
+            # Get base prediction from the classifier (which now handles hybrid logic)
+            base_result = self.classifier.classify_with_confidence(features.reshape(1, -1), spectrograms.reshape(1, spectrograms.shape[0], spectrograms.shape[1], 1))
             
-            # Apply context if baby profile is provided
+            # Apply context if a baby profile is provided
             if baby_profile:
-                probabilities = self.classifier.predict_proba(features)[0]
                 context_result = self.context_manager.apply_context_to_prediction(
-                    probabilities, baby_profile, self.classifier.classes
+                    base_result['all_probabilities'], 
+                    baby_profile, 
+                    self.classes
                 )
                 
-                # Combine results
-                result = {
-                    'audio_file': audio_path,
-                    'base_prediction': base_result,
-                    'context_enhanced': context_result,
-                    'final_prediction': context_result['context_adjusted_prediction'],
-                    'final_confidence': context_result['context_adjusted_confidence'],
-                    'explanation': context_result['explanation'],
-                    'baby_profile_used': True,
-                    'baby_name': baby_profile.baby_name,
-                    'recommendations': self._get_specific_recommendations(
-                        context_result['context_adjusted_prediction'], 
-                        baby_profile
-                    )
-                }
-            else:
-                # No context available
-                result = {
-                    'audio_file': audio_path,
-                    'final_prediction': base_result['prediction'],
-                    'final_confidence': base_result['confidence'],
-                    'all_probabilities': base_result['all_probabilities'],
-                    'explanation': f"AI prediction: {base_result['prediction']} with {base_result['confidence']:.2f} confidence",
-                    'baby_profile_used': False,
-                    'recommendations': self._get_general_recommendations(base_result['prediction'])
-                }
+                # Merge base result with context result
+                final_result = {**base_result, **context_result}
+                
+                # Generate recommendations based on the final prediction and context
+                final_result['recommendations'] = self._get_specific_recommendations(
+                    final_result['prediction'], baby_profile
+                )
+                
+                return final_result
             
-            # Add timestamp
-            result['timestamp'] = datetime.now().isoformat()
-            
-            return result
+            # If no baby profile, return base result with general recommendations
+            base_result['recommendations'] = self._get_general_recommendations(base_result['prediction'])
+            return base_result
             
         except Exception as e:
-            return {
-                'error': f"Error processing audio: {str(e)}",
-                'audio_file': audio_path,
-                'timestamp': datetime.now().isoformat()
-            }
+            print(f"Error classifying cry: {e}")
+            raise e
     
     def create_baby_profile(self, 
                            baby_name: str,
