@@ -118,10 +118,18 @@ class BabyWhisperClassifier:
                     final_result['prediction'], baby_profile
                 )
                 
+                # Include explanation from context result
+                if 'explanation' in context_result:
+                    final_result['explanation'] = context_result['explanation']
+                
                 return final_result
             
             # If no baby profile, return base result with general recommendations
             base_result['recommendations'] = self._get_general_recommendations(base_result['prediction'])
+            
+            # Add general explanation
+            base_result['explanation'] = f"AI analysis based on audio features only. Prediction: {base_result['prediction']} with {base_result['confidence']:.2f} confidence. For more personalized insights, create a baby profile with feeding, sleep, and care history."
+            
             return base_result
             
         except Exception as e:

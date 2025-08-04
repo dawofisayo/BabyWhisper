@@ -49,27 +49,79 @@ const Analytics = () => {
     );
   }
 
-  const systemMetrics = {
-    modelAccuracy: "83.7%",
-    audioFeatures: "293",
-    modelType: "Ensemble (RF, SVM, MLP)",
-    trainingSamples: "457",
-    inferenceTime: "0.8s",
-    contextAwareness: "Enabled"
-  };
+  const systemMetrics = [
+    {
+      label: "Model Accuracy",
+      value: "83.7%",
+      description: "Ensemble model performance",
+      icon: Target,
+      color: "text-green-600",
+      bgColor: "bg-green-50"
+    },
+    {
+      label: "Audio Features",
+      value: "293",
+      description: "Extracted features per sample",
+      icon: Zap,
+      color: "text-blue-600",
+      bgColor: "bg-blue-50"
+    },
+    {
+      label: "Model Type",
+      value: "Ensemble",
+      description: "RF, SVM, MLP combination",
+      icon: Brain,
+      color: "text-purple-600",
+      bgColor: "bg-purple-50"
+    },
+    {
+      label: "Training Samples",
+      value: "457",
+      description: "Real baby cry recordings",
+      icon: Baby,
+      color: "text-baby-600",
+      bgColor: "bg-baby-50"
+    },
+    {
+      label: "Inference Time",
+      value: "0.8s",
+      description: "Average processing time",
+      icon: Clock,
+      color: "text-orange-600",
+      bgColor: "bg-orange-50"
+    },
+    {
+      label: "Context Awareness",
+      value: "Enabled",
+      description: "Baby profile integration",
+      icon: Activity,
+      color: "text-indigo-600",
+      bgColor: "bg-indigo-50"
+    }
+  ];
 
-  const modelPerformance = {
-    accuracy: 0.837,
-    precision: 0.832,
-    recall: 0.837,
-    f1Score: 0.834,
-    confusionMatrix: [
-      [15, 2, 1, 0],
-      [3, 68, 1, 2],
-      [0, 1, 12, 1],
-      [1, 1, 0, 8]
-    ]
-  };
+  const modelPerformance = [
+    {
+      model: "Random Forest",
+      accuracy: 79.3,
+      color: "bg-green-500"
+    },
+    {
+      model: "Support Vector Machine",
+      accuracy: 83.7,
+      color: "bg-blue-500"
+    },
+    {
+      model: "Multi-layer Perceptron",
+      accuracy: 79.3,
+      color: "bg-purple-500"
+    },
+    {
+      model: "Ensemble (Voting)",
+      accuracy: 83.7,
+      color: "bg-baby-500"
+    }
+  ];
 
   const cryCategories = [
     { name: "Hunger", count: 382, percentage: 83.6 },
@@ -177,7 +229,7 @@ const Analytics = () => {
           <div className="space-y-3">
             <div className="flex justify-between items-center py-2 border-b border-gray-100">
               <span className="text-gray-600">Audio Processing</span>
-              <span className="font-medium">323 features per sample</span>
+              <span className="font-medium">293 features per sample</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-gray-100">
               <span className="text-gray-600">Sampling Rate</span>
@@ -189,7 +241,7 @@ const Analytics = () => {
             </div>
             <div className="flex justify-between items-center py-2 border-b border-gray-100">
               <span className="text-gray-600">Feature Types</span>
-              <span className="font-medium">MFCC, Spectral, Temporal</span>
+              <span className="font-medium">MFCC, Mel-spectrogram, F0, Temporal</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-gray-100">
               <span className="text-gray-600">Training Dataset</span>

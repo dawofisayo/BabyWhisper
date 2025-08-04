@@ -61,8 +61,16 @@ class ContextManager:
         # Get context probability adjustments
         context_adjustments = baby_profile.get_context_probabilities()
         
+        # Handle both dictionary and numpy array inputs
+        if isinstance(base_probabilities, dict):
+            # Convert dictionary to numpy array in the correct order
+            base_probs_array = np.array([base_probabilities.get(class_name, 0.0) for class_name in classes])
+        else:
+            # Already a numpy array
+            base_probs_array = base_probabilities.copy()
+        
         # Apply adjustments to base probabilities
-        adjusted_probs = base_probabilities.copy()
+        adjusted_probs = base_probs_array.copy()
         
         for i, class_name in enumerate(classes):
             if class_name in context_adjustments:
@@ -74,7 +82,7 @@ class ContextManager:
         adjusted_probs = adjusted_probs / np.sum(adjusted_probs)
         
         # Get predictions
-        base_prediction_idx = np.argmax(base_probabilities)
+        base_prediction_idx = np.argmax(base_probs_array)
         adjusted_prediction_idx = np.argmax(adjusted_probs)
         
         base_prediction = classes[base_prediction_idx]
@@ -83,16 +91,16 @@ class ContextManager:
         # Generate explanation
         explanation = self._generate_context_explanation(
             baby_profile, base_prediction, adjusted_prediction, 
-            base_probabilities[base_prediction_idx],
+            base_probs_array[base_prediction_idx],
             adjusted_probs[adjusted_prediction_idx],
             context_adjustments
         )
         
         return {
             'base_prediction': base_prediction,
-            'base_confidence': float(base_probabilities[base_prediction_idx]),
+            'base_confidence': float(base_probs_array[base_prediction_idx]),
             'base_probabilities': {
-                classes[i]: float(prob) for i, prob in enumerate(base_probabilities)
+                classes[i]: float(prob) for i, prob in enumerate(base_probs_array)
             },
             'context_adjusted_prediction': adjusted_prediction,
             'context_adjusted_confidence': float(adjusted_probs[adjusted_prediction_idx]),

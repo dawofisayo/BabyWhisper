@@ -281,9 +281,9 @@ class BabyProfile:
         """
         adjustments = {
             'hunger': 0.0,
-            'tiredness': 0.0,
-            'discomfort': 0.0,
             'pain': 0.0,
+            'discomfort': 0.0,
+            'tiredness': 0.0,
             'normal': 0.0
         }
         

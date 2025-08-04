@@ -344,7 +344,7 @@ const AudioClassifier = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Main Result */}
-            <div className={`p-6 rounded-xl border-2 ${getConfidenceBg(analysisResult.final_confidence)}`}>
+            <div className={`p-6 rounded-xl border-2 ${getConfidenceBg(analysisResult.confidence)}`}>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Primary Classification</h3>
                 <Baby className="w-6 h-6 text-baby-600" />
@@ -352,11 +352,11 @@ const AudioClassifier = () => {
               
               <div className="text-center mb-4">
                 <p className="text-3xl font-bold text-gray-900 mb-2">
-                  {analysisResult.final_prediction?.charAt(0).toUpperCase() + 
-                   analysisResult.final_prediction?.slice(1)}
+                  {analysisResult.prediction?.charAt(0).toUpperCase() + 
+                   analysisResult.prediction?.slice(1)}
                 </p>
-                <p className={`text-lg font-semibold ${getConfidenceColor(analysisResult.final_confidence)}`}>
-                  {(analysisResult.final_confidence * 100).toFixed(1)}% confidence
+                <p className={`text-lg font-semibold ${getConfidenceColor(analysisResult.confidence)}`}>
+                  {(analysisResult.confidence * 100).toFixed(1)}% confidence
                 </p>
               </div>
 

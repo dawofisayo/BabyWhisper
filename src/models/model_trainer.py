@@ -15,19 +15,25 @@ from tqdm import tqdm
 
 # Use try-except for imports to handle different execution contexts
 try:
-    from audio_processing import AudioFeatureExtractor, AudioPreprocessor
-    from models.classifier import BabyCryClassifier
+    from src.audio_processing.feature_extractor import AudioFeatureExtractor
+    from src.audio_processing.preprocessor import AudioPreprocessor
+    from src.models.classifier import BabyCryClassifier
 except ImportError:
     try:
         from audio_processing.feature_extractor import AudioFeatureExtractor
         from audio_processing.preprocessor import AudioPreprocessor
         from models.classifier import BabyCryClassifier
     except ImportError:
-        print("⚠️  Import warning: Some modules may not be available")
-        # Define placeholder classes to avoid NameError
-        class AudioFeatureExtractor: pass
-        class AudioPreprocessor: pass
-        class BabyCryClassifier: pass
+        try:
+            from ..audio_processing.feature_extractor import AudioFeatureExtractor
+            from ..audio_processing.preprocessor import AudioPreprocessor
+            from .classifier import BabyCryClassifier
+        except ImportError:
+            print("⚠️  Import warning: Some modules may not be available")
+            # Define placeholder classes to avoid NameError
+            class AudioFeatureExtractor: pass
+            class AudioPreprocessor: pass
+            class BabyCryClassifier: pass
 
 import glob
 from collections import Counter

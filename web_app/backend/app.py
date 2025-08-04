@@ -305,7 +305,7 @@ def classify_audio():
             result['timestamp'] = datetime.now().isoformat()
             result['baby_used'] = baby_profile.baby_name if baby_profile else None
             
-            logger.info(f"Audio classified: {result.get('final_prediction', 'unknown')}")
+            logger.info(f"Audio classified: {result.get('prediction', 'unknown')}")
             
             return jsonify(result)
             
