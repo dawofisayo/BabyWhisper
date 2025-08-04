@@ -1,19 +1,36 @@
-"""Model training utilities and data management."""
+"""Model training utilities for baby cry classification."""
 
+import os
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split, GridSearchCV, StratifiedKFold
-from sklearn.metrics import classification_report, confusion_matrix
-import matplotlib.pyplot as plt
-import seaborn as sns
-from typing import Dict, List, Tuple, Optional
-import os
+from typing import Dict, List, Tuple, Optional, Any
+from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score, StratifiedKFold
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
+from sklearn.ensemble import RandomForestClassifier, VotingClassifier
+from sklearn.svm import SVC
+from sklearn.neural_network import MLPClassifier
+import joblib
 from tqdm import tqdm
-import warnings
-warnings.filterwarnings('ignore')
 
-from ..audio_processing import AudioFeatureExtractor, AudioPreprocessor
-from .classifier import BabyCryClassifier
+# Use try-except for imports to handle different execution contexts
+try:
+    from audio_processing import AudioFeatureExtractor, AudioPreprocessor
+    from models.classifier import BabyCryClassifier
+except ImportError:
+    try:
+        from audio_processing.feature_extractor import AudioFeatureExtractor
+        from audio_processing.preprocessor import AudioPreprocessor
+        from models.classifier import BabyCryClassifier
+    except ImportError:
+        print("⚠️  Import warning: Some modules may not be available")
+        # Define placeholder classes to avoid NameError
+        class AudioFeatureExtractor: pass
+        class AudioPreprocessor: pass
+        class BabyCryClassifier: pass
+
+import glob
+from collections import Counter
 
 
 class ModelTrainer:
@@ -166,104 +183,385 @@ class ModelTrainer:
         
         return np.array(features), np.array(valid_labels)
     
-    def prepare_data(self, features: np.ndarray, labels: np.ndarray,
-                    test_size: float = 0.2, validation_size: float = 0.2,
-                    random_state: int = 42) -> Dict:
+    def load_donateacry_dataset(self, dataset_path: str = "data/donateacry_corpus_cleaned_and_updated_data") -> Tuple[np.ndarray, np.ndarray]:
         """
-        Prepare data for training with train/validation/test splits.
+        Load the real Donate-a-Cry dataset.
         
         Args:
-            features: Feature matrix
-            labels: Target labels
-            test_size: Proportion of test data
-            validation_size: Proportion of validation data
+            dataset_path: Path to the donateacry dataset
+            
+        Returns:
+            Tuple of (features, labels)
+        """
+        print(f"Loading real baby cry data from {dataset_path}...")
+        
+        # Map dataset folder names to our standard classes
+        class_mapping = {
+            'hungry': 'hunger',
+            'tired': 'tiredness', 
+            'discomfort': 'discomfort',
+            'belly_pain': 'pain',
+            'burping': 'discomfort'  # Map burping to discomfort for now
+        }
+        
+        features_list = []
+        labels_list = []
+        
+        if not os.path.exists(dataset_path):
+            print(f"❌ Dataset not found at {dataset_path}")
+            print("🔄 Falling back to synthetic data...")
+            return self.create_synthetic_dataset()
+        
+        # Load files from each category
+        for folder_name, class_name in class_mapping.items():
+            folder_path = os.path.join(dataset_path, folder_name)
+            
+            if not os.path.exists(folder_path):
+                print(f"⚠️  Folder {folder_name} not found, skipping...")
+                continue
+            
+            print(f"📁 Processing {folder_name} -> {class_name}")
+            
+            # Find all audio files in the folder
+            audio_files = []
+            for ext in ['*.wav', '*.mp3', '*.flac', '*.m4a']:
+                audio_files.extend(glob.glob(os.path.join(folder_path, ext)))
+            
+            print(f"   Found {len(audio_files)} audio files")
+            
+            # Process each audio file
+            for audio_file in tqdm(audio_files, desc=f"Extracting {class_name} features"):
+                try:
+                    # Extract features using our feature extractor
+                    feature_vector = self.feature_extractor.extract_feature_vector(audio_file)
+                    
+                    if feature_vector is not None and len(feature_vector) > 0:
+                        features_list.append(feature_vector)
+                        labels_list.append(class_name)
+                    else:
+                        print(f"⚠️  Failed to extract features from {audio_file}")
+                        
+                except Exception as e:
+                    print(f"❌ Error processing {audio_file}: {str(e)}")
+                    continue
+        
+        if len(features_list) == 0:
+            print("❌ No features extracted from real data, falling back to synthetic")
+            return self.create_synthetic_dataset()
+        
+        # Convert to numpy arrays
+        features = np.array(features_list)
+        labels = np.array(labels_list)
+        
+        print(f"✅ Loaded {len(features)} real baby cry samples")
+        print(f"📊 Feature shape: {features.shape}")
+        print(f"🏷️  Classes: {np.unique(labels)}")
+        
+        # Print class distribution
+        class_counts = Counter(labels)
+        print("📈 Class distribution:")
+        for class_name, count in class_counts.items():
+            print(f"   {class_name}: {count} samples")
+        
+        return features, labels
+    
+    def train_ensemble(self, X_train: np.ndarray, y_train: np.ndarray, 
+                      X_val: np.ndarray, y_val: np.ndarray) -> Dict:
+        """
+        Train ensemble of models.
+        
+        Args:
+            X_train, y_train: Training data
+            X_val, y_val: Validation data
+            
+        Returns:
+            Training results dictionary
+        """
+        print("🤖 Training ensemble models...")
+        
+        # Prepare data
+        self.scaler = StandardScaler()
+        X_train_scaled = self.scaler.fit_transform(X_train)
+        X_val_scaled = self.scaler.transform(X_val)
+        
+        self.label_encoder = LabelEncoder()
+        y_train_encoded = self.label_encoder.fit_transform(y_train)
+        y_val_encoded = self.label_encoder.transform(y_val)
+        
+        # Define models
+        models = {
+            'random_forest': RandomForestClassifier(
+                n_estimators=100,
+                max_depth=10,
+                random_state=42,
+                n_jobs=-1
+            ),
+            'svm': SVC(
+                kernel='rbf',
+                C=1.0,
+                probability=True,
+                random_state=42
+            ),
+            'mlp': MLPClassifier(
+                hidden_layer_sizes=(100, 50),
+                max_iter=500,
+                random_state=42
+            )
+        }
+        
+        # Train individual models
+        self.trained_models = {}
+        results = {}
+        
+        for model_name, model in models.items():
+            print(f"   Training {model_name}...")
+            
+            try:
+                model.fit(X_train_scaled, y_train_encoded)
+                
+                # Validate
+                val_pred = model.predict(X_val_scaled)
+                val_accuracy = accuracy_score(y_val_encoded, val_pred)
+                
+                self.trained_models[model_name] = model
+                results[model_name] = {
+                    'validation_accuracy': val_accuracy,
+                    'model': model
+                }
+                
+                print(f"     ✅ {model_name}: {val_accuracy:.3f} accuracy")
+                
+            except Exception as e:
+                print(f"     ❌ {model_name} failed: {e}")
+                continue
+        
+        # Create ensemble
+        if len(self.trained_models) >= 2:
+            print("   Creating ensemble...")
+            
+            ensemble_models = [(name, model) for name, model in self.trained_models.items()]
+            self.ensemble = VotingClassifier(
+                estimators=ensemble_models,
+                voting='soft'
+            )
+            
+            self.ensemble.fit(X_train_scaled, y_train_encoded)
+            
+            # Validate ensemble
+            ensemble_pred = self.ensemble.predict(X_val_scaled)
+            ensemble_accuracy = accuracy_score(y_val_encoded, ensemble_pred)
+            
+            results['ensemble'] = {
+                'validation_accuracy': ensemble_accuracy,
+                'model': self.ensemble
+            }
+            
+            print(f"     ✅ ensemble: {ensemble_accuracy:.3f} accuracy")
+        
+        return results
+    
+    def evaluate_models(self, X_test: np.ndarray, y_test: np.ndarray) -> Dict:
+        """
+        Evaluate trained models on test data.
+        
+        Args:
+            X_test, y_test: Test data
+            
+        Returns:
+            Evaluation results dictionary
+        """
+        print("📊 Evaluating models on test data...")
+        
+        X_test_scaled = self.scaler.transform(X_test)
+        y_test_encoded = self.label_encoder.transform(y_test)
+        
+        results = {}
+        
+        # Evaluate individual models
+        for model_name, model in self.trained_models.items():
+            try:
+                y_pred = model.predict(X_test_scaled)
+                
+                accuracy = accuracy_score(y_test_encoded, y_pred)
+                precision = precision_score(y_test_encoded, y_pred, average='weighted', zero_division=0)
+                recall = recall_score(y_test_encoded, y_pred, average='weighted', zero_division=0)
+                f1 = f1_score(y_test_encoded, y_pred, average='weighted', zero_division=0)
+                
+                results[model_name] = {
+                    'accuracy': accuracy,
+                    'precision': precision,
+                    'recall': recall,
+                    'f1': f1
+                }
+                
+                print(f"   {model_name}: Acc={accuracy:.3f}, F1={f1:.3f}")
+                
+            except Exception as e:
+                print(f"   ❌ {model_name} evaluation failed: {e}")
+                continue
+        
+        # Evaluate ensemble
+        if hasattr(self, 'ensemble'):
+            try:
+                y_pred = self.ensemble.predict(X_test_scaled)
+                
+                accuracy = accuracy_score(y_test_encoded, y_pred)
+                precision = precision_score(y_test_encoded, y_pred, average='weighted', zero_division=0)
+                recall = recall_score(y_test_encoded, y_pred, average='weighted', zero_division=0)
+                f1 = f1_score(y_test_encoded, y_pred, average='weighted', zero_division=0)
+                
+                results['ensemble'] = {
+                    'accuracy': accuracy,
+                    'precision': precision,
+                    'recall': recall,
+                    'f1': f1
+                }
+                
+                print(f"   🏆 ensemble: Acc={accuracy:.3f}, F1={f1:.3f}")
+                
+            except Exception as e:
+                print(f"   ❌ ensemble evaluation failed: {e}")
+        
+        return results
+    
+    def save_models(self, model_dir: str = "models") -> bool:
+        """
+        Save trained models to disk.
+        
+        Args:
+            model_dir: Directory to save models
+            
+        Returns:
+            True if successful
+        """
+        try:
+            os.makedirs(model_dir, exist_ok=True)
+            
+            # Save individual models
+            for model_name, model in self.trained_models.items():
+                model_path = os.path.join(model_dir, f"{model_name}_model.pkl")
+                joblib.dump(model, model_path)
+                print(f"💾 Saved {model_name} to {model_path}")
+            
+            # Save ensemble
+            if hasattr(self, 'ensemble'):
+                ensemble_path = os.path.join(model_dir, "ensemble_model.pkl")
+                joblib.dump(self.ensemble, ensemble_path)
+                print(f"💾 Saved ensemble to {ensemble_path}")
+            
+            # Save preprocessing objects
+            scaler_path = os.path.join(model_dir, "scaler.pkl")
+            encoder_path = os.path.join(model_dir, "label_encoder.pkl")
+            
+            joblib.dump(self.scaler, scaler_path)
+            joblib.dump(self.label_encoder, encoder_path)
+            
+            print(f"💾 Saved scaler to {scaler_path}")
+            print(f"💾 Saved label encoder to {encoder_path}")
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ Failed to save models: {e}")
+            return False
+    
+    def prepare_data(self, features: np.ndarray, labels: np.ndarray,
+                    test_size: float = 0.2, validation_size: float = 0.2,
+                    random_state: int = 42) -> Tuple[np.ndarray, np.ndarray, np.ndarray, 
+                                                    np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Prepare data splits for training.
+        
+        Args:
+            features: Feature array
+            labels: Label array
+            test_size: Proportion for test set
+            validation_size: Proportion for validation set (from remaining data)
             random_state: Random seed
             
         Returns:
-            Dictionary containing data splits
+            Tuple of (X_train, X_test, X_val, y_train, y_test, y_val)
         """
         # First split: train+val vs test
         X_temp, X_test, y_temp, y_test = train_test_split(
-            features, labels, 
-            test_size=test_size, 
-            random_state=random_state,
-            stratify=labels
+            features, labels, test_size=test_size, 
+            random_state=random_state, stratify=labels
         )
         
-        # Second split: train vs validation
+        # Second split: train vs val
         val_size_adjusted = validation_size / (1 - test_size)
         X_train, X_val, y_train, y_val = train_test_split(
-            X_temp, y_temp,
-            test_size=val_size_adjusted,
-            random_state=random_state,
-            stratify=y_temp
+            X_temp, y_temp, test_size=val_size_adjusted,
+            random_state=random_state, stratify=y_temp
         )
         
-        # Store data
-        self.features = features
-        self.labels = labels
-        self.feature_names = self.feature_extractor.get_feature_names()
-        
-        data_splits = {
-            'X_train': X_train,
-            'X_val': X_val,
-            'X_test': X_test,
-            'y_train': y_train,
-            'y_val': y_val,
-            'y_test': y_test
-        }
-        
-        # Print data information
         print(f"Data prepared:")
         print(f"  Training samples: {len(X_train)}")
         print(f"  Validation samples: {len(X_val)}")
         print(f"  Test samples: {len(X_test)}")
-        print(f"  Features: {X_train.shape[1]}")
-        print(f"  Classes: {np.unique(labels)}")
+        print(f"  Features: {X_train.shape[1] if len(X_train.shape) > 1 else 'Unknown'}")
+        print(f"  Classes: {list(np.unique(labels))}")
         
-        return data_splits
+        return X_train, X_test, X_val, y_train, y_test, y_val
     
-    def train_model(self, data_splits: Dict, model_type: str = 'ensemble',
-                   hyperparameter_tuning: bool = False) -> BabyCryClassifier:
+    def train_model(self, use_synthetic_data: bool = False, save_model: bool = True) -> Dict:
         """
-        Train the baby cry classifier.
+        Train the baby cry classification model using real or synthetic data.
         
         Args:
-            data_splits: Data splits dictionary
-            model_type: Type of model to train
-            hyperparameter_tuning: Whether to perform hyperparameter tuning
+            use_synthetic_data: If True, use synthetic data. If False, try to load real data first.
+            save_model: Whether to save the trained model
             
         Returns:
-            Trained classifier
+            Training results dictionary
         """
-        print(f"Training {model_type} model...")
+        print("🚀 Starting BabyWhisper model training...")
         
-        # Initialize classifier
-        self.classifier = BabyCryClassifier(model_type=model_type)
+        # Load data - prefer real data over synthetic
+        if not use_synthetic_data:
+            print("🎯 Attempting to load REAL baby cry data...")
+            try:
+                features, labels = self.load_donateacry_dataset()
+                data_source = "Real Donate-a-Cry Dataset"
+            except Exception as e:
+                print(f"❌ Failed to load real data: {e}")
+                print("🔄 Falling back to synthetic data...")
+                features, labels = self.create_synthetic_dataset()
+                data_source = "Synthetic Dataset (Fallback)"
+        else:
+            print("🔬 Using synthetic data for testing...")
+            features, labels = self.create_synthetic_dataset()
+            data_source = "Synthetic Dataset (Manual Override)"
         
-        # Hyperparameter tuning (optional)
-        if hyperparameter_tuning and model_type in ['rf', 'svm']:
-            print("Performing hyperparameter tuning...")
-            self.classifier = self._tune_hyperparameters(
-                data_splits['X_train'], 
-                data_splits['y_train'],
-                model_type
-            )
+        # Rest of training logic remains the same
+        X_train, X_test, X_val, y_train, y_test, y_val = self.prepare_data(features, labels)
         
-        # Train the model
-        X_train_combined = np.vstack([data_splits['X_train'], data_splits['X_val']])
-        y_train_combined = np.hstack([data_splits['y_train'], data_splits['y_val']])
+        # Train models
+        results = self.train_ensemble(X_train, y_train, X_val, y_val)
         
-        performances = self.classifier.fit(X_train_combined, y_train_combined)
+        # Evaluate
+        final_results = self.evaluate_models(X_test, y_test)
         
-        print("\nTraining completed!")
-        for model_name, score in performances.items():
-            print(f"{model_name.upper()} Performance: {score:.3f}")
+        # Combine results
+        training_summary = {
+            'data_source': data_source,
+            'total_samples': len(features),
+            'features_per_sample': features.shape[1] if len(features.shape) > 1 else len(features[0]),
+            'classes': list(np.unique(labels)),
+            'class_distribution': dict(zip(*np.unique(labels, return_counts=True))),
+            'training_results': results,
+            'test_results': final_results
+        }
         
-        return self.classifier
+        if save_model:
+            self.save_models()
+            print("💾 Models saved successfully!")
+        
+        print(f"✅ Training completed using: {data_source}")
+        return training_summary
     
     def _tune_hyperparameters(self, X_train: np.ndarray, y_train: np.ndarray,
-                            model_type: str) -> BabyCryClassifier:
+                             model_type: str):
         """Perform hyperparameter tuning using GridSearchCV."""
         if model_type == 'rf':
             param_grid = {
@@ -271,201 +569,122 @@ class ModelTrainer:
                 'max_depth': [10, 15, 20],
                 'min_samples_split': [2, 5, 10]
             }
-            from sklearn.ensemble import RandomForestClassifier
-            base_model = RandomForestClassifier(random_state=42)
-            
+            model = RandomForestClassifier(random_state=42)
         elif model_type == 'svm':
             param_grid = {
                 'C': [0.1, 1, 10],
-                'gamma': ['scale', 'auto', 0.001, 0.01],
-                'kernel': ['rbf', 'poly']
+                'gamma': ['scale', 'auto', 0.1, 1],
+                'kernel': ['rbf', 'linear']
             }
-            from sklearn.svm import SVC
-            base_model = SVC(probability=True, random_state=42)
+            model = SVC(random_state=42)
+        else:
+            raise ValueError(f"Hyperparameter tuning not supported for {model_type}")
         
         # Perform grid search
         grid_search = GridSearchCV(
-            base_model, 
-            param_grid, 
-            cv=StratifiedKFold(n_splits=3),
-            scoring='accuracy',
-            n_jobs=-1,
-            verbose=1
+            model, param_grid, 
+            cv=5, scoring='accuracy', 
+            n_jobs=-1, verbose=1
         )
         
-        # Fit on scaled data
-        from sklearn.preprocessing import StandardScaler
-        scaler = StandardScaler()
-        X_scaled = scaler.fit_transform(X_train)
+        grid_search.fit(X_train, y_train)
         
-        grid_search.fit(X_scaled, y_train)
-        
-        print(f"Best parameters: {grid_search.best_params_}")
-        print(f"Best CV score: {grid_search.best_score_:.3f}")
+        print(f"Best parameters for {model_type}: {grid_search.best_params_}")
+        print(f"Best cross-validation score: {grid_search.best_score_:.3f}")
         
         # Create classifier with best parameters
-        classifier = BabyCryClassifier(model_type=model_type)
-        if model_type == 'rf':
-            classifier.models['rf'] = RandomForestClassifier(**grid_search.best_params_, random_state=42)
-        elif model_type == 'svm':
-            classifier.models['svm'] = SVC(**grid_search.best_params_, probability=True, random_state=42)
-        
-        return classifier
+        best_model = grid_search.best_estimator_
+        return BabyCryClassifier(custom_model=best_model, model_type=model_type)
     
-    def evaluate_model(self, data_splits: Dict, 
-                      save_plots: bool = True) -> Dict:
+    def evaluate_model(self, X_test: np.ndarray, y_test: np.ndarray) -> Dict:
         """
-        Comprehensive model evaluation.
+        Evaluate the trained model on test data.
         
         Args:
-            data_splits: Data splits dictionary
-            save_plots: Whether to save evaluation plots
+            X_test: Test features
+            y_test: Test labels
             
         Returns:
-            Evaluation results
+            Evaluation metrics dictionary
         """
         if self.classifier is None:
-            raise ValueError("Model must be trained before evaluation")
+            raise ValueError("No trained model available. Train a model first.")
         
-        print("Evaluating model...")
+        # Make predictions
+        y_pred = self.classifier.predict(X_test)
         
-        # Evaluate on test set
-        results = self.classifier.evaluate(
-            data_splits['X_test'], 
-            data_splits['y_test']
-        )
+        # Calculate metrics
+        accuracy = accuracy_score(y_test, y_pred)
+        precision = precision_score(y_test, y_pred, average='weighted', zero_division=0)
+        recall = recall_score(y_test, y_pred, average='weighted', zero_division=0)
+        f1 = f1_score(y_test, y_pred, average='weighted', zero_division=0)
         
-        print(f"\nTest Set Performance:")
-        print(f"Accuracy: {results['accuracy']:.3f}")
-        print(f"Precision: {results['precision']:.3f}")
-        print(f"Recall: {results['recall']:.3f}")
-        print(f"F1-Score: {results['f1_score']:.3f}")
+        # Classification report
+        class_report = classification_report(y_test, y_pred, output_dict=True)
         
-        print(f"\nDetailed Classification Report:")
-        print(results['classification_report'])
+        # Confusion matrix
+        cm = confusion_matrix(y_test, y_pred)
         
-        # Create visualizations
-        if save_plots:
-            self._create_evaluation_plots(results, data_splits)
+        results = {
+            'accuracy': accuracy,
+            'precision': precision,
+            'recall': recall,
+            'f1_score': f1,
+            'classification_report': class_report,
+            'confusion_matrix': cm.tolist(),
+            'test_samples': len(y_test)
+        }
+        
+        print(f"\n📊 Model Evaluation Results:")
+        print(f"Accuracy: {accuracy:.3f}")
+        print(f"Precision: {precision:.3f}")
+        print(f"Recall: {recall:.3f}")
+        print(f"F1-Score: {f1:.3f}")
         
         return results
     
-    def _create_evaluation_plots(self, results: Dict, data_splits: Dict):
-        """Create evaluation plots and save them."""
-        os.makedirs('plots', exist_ok=True)
+    def save_model(self, filepath: str = None):
+        """Save the trained model to disk."""
+        if self.classifier is None:
+            raise ValueError("No trained model to save.")
         
-        # 1. Confusion Matrix
-        plt.figure(figsize=(10, 8))
-        sns.heatmap(
-            results['confusion_matrix'], 
-            annot=True, 
-            fmt='d',
-            xticklabels=self.classifier.classes,
-            yticklabels=self.classifier.classes,
-            cmap='Blues'
-        )
-        plt.title('Confusion Matrix')
-        plt.xlabel('Predicted')
-        plt.ylabel('Actual')
-        plt.tight_layout()
-        plt.savefig('plots/confusion_matrix.png', dpi=300, bbox_inches='tight')
-        plt.show()
+        if filepath is None:
+            os.makedirs("models", exist_ok=True)
+            filepath = f"models/{self.model_name}.pkl"
         
-        # 2. Feature Importance (if available)
-        importance = self.classifier.get_feature_importance()
-        if 'rf' in importance:
-            plt.figure(figsize=(12, 8))
-            top_features = np.argsort(importance['rf'])[-20:]  # Top 20 features
-            
-            plt.barh(range(len(top_features)), importance['rf'][top_features])
-            plt.yticks(range(len(top_features)), 
-                      [self.feature_names[i] for i in top_features])
-            plt.xlabel('Feature Importance')
-            plt.title('Top 20 Most Important Features (Random Forest)')
-            plt.tight_layout()
-            plt.savefig('plots/feature_importance.png', dpi=300, bbox_inches='tight')
-            plt.show()
+        self.classifier.save_model(filepath)
+        print(f"Model saved to {filepath}")
         
-        # 3. Class Distribution
-        plt.figure(figsize=(10, 6))
-        unique, counts = np.unique(data_splits['y_test'], return_counts=True)
-        plt.bar(unique, counts)
-        plt.title('Test Set Class Distribution')
-        plt.xlabel('Class')
-        plt.ylabel('Count')
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        plt.savefig('plots/class_distribution.png', dpi=300, bbox_inches='tight')
-        plt.show()
-        
-        # 4. Prediction Confidence Distribution
-        probabilities = results['probabilities']
-        max_probs = np.max(probabilities, axis=1)
-        
-        plt.figure(figsize=(10, 6))
-        plt.hist(max_probs, bins=20, alpha=0.7, edgecolor='black')
-        plt.xlabel('Maximum Prediction Probability')
-        plt.ylabel('Frequency')
-        plt.title('Distribution of Prediction Confidence')
-        plt.axvline(x=0.6, color='red', linestyle='--', label='Confidence Threshold')
-        plt.legend()
-        plt.tight_layout()
-        plt.savefig('plots/confidence_distribution.png', dpi=300, bbox_inches='tight')
-        plt.show()
-    
-    def save_training_results(self, results: Dict, 
-                            model_path: str = "models/baby_cry_classifier"):
-        """
-        Save training results and model.
-        
-        Args:
-            results: Evaluation results
-            model_path: Path to save the model
-        """
-        os.makedirs('models', exist_ok=True)
-        
-        # Save the trained model
-        self.classifier.save_model(model_path)
-        
-        # Save training metadata
+        # Also save metadata
         metadata = {
-            'model_type': self.classifier.model_type,
-            'feature_count': len(self.feature_names),
-            'classes': self.classifier.classes,
-            'test_accuracy': results['accuracy'],
-            'test_precision': results['precision'],
-            'test_recall': results['recall'],
-            'test_f1': results['f1_score']
+            'model_name': self.model_name,
+            'feature_count': len(self.feature_names) if hasattr(self, 'feature_names') else None,
+            'training_samples': len(self.labels) if hasattr(self, 'labels') else None,
+            'classes': list(np.unique(self.labels)) if hasattr(self, 'labels') else None
         }
         
-        pd.DataFrame([metadata]).to_csv('models/training_metadata.csv', index=False)
+        metadata_path = filepath.replace('.pkl', '_metadata.json')
+        with open(metadata_path, 'w') as f:
+            import json
+            json.dump(metadata, f, indent=2)
         
-        print(f"Model saved to {model_path}")
-        print("Training metadata saved to models/training_metadata.csv")
+        print(f"Metadata saved to {metadata_path}")
     
-    def quick_demo_training(self) -> BabyCryClassifier:
-        """
-        Quick demonstration training with synthetic data.
+    def quick_demo_training(self):
+        """Quick training for demonstration purposes."""
+        print("🚀 Quick Demo Training...")
         
-        Returns:
-            Trained classifier ready for demonstration
-        """
-        print("Starting quick demo training...")
-        
-        # Create synthetic dataset
-        features, labels = self.create_synthetic_dataset(n_samples=1000)
+        # Generate small synthetic dataset
+        features, labels = self.create_synthetic_dataset(samples_per_class=20)
         
         # Prepare data
         data_splits = self.prepare_data(features, labels)
         
         # Train model
-        classifier = self.train_model(data_splits, model_type='ensemble')
+        classifier = self.train_model(model_type='ensemble')
         
         # Evaluate
-        results = self.evaluate_model(data_splits, save_plots=True)
+        results = self.evaluate_model(data_splits['X_test'], data_splits['y_test'])
         
-        # Save results
-        self.save_training_results(results)
-        
-        print("\nDemo training completed!")
+        print(f"🎯 Demo training completed! Accuracy: {results['accuracy']:.3f}")
         return classifier 

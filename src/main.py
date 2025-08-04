@@ -16,25 +16,66 @@ from .utils import DataLoader, ModelEvaluator
 class BabyWhisperClassifier:
     """Main interface for the BabyWhisper baby cry classification system."""
     
-    def __init__(self, model_path: Optional[str] = None):
-        """
-        Initialize the BabyWhisper classifier.
-        
-        Args:
-            model_path: Path to a pre-trained model (optional)
-        """
-        # Initialize components
+    def __init__(self):
+        """Initialize BabyWhisper classifier with all components."""
+        # Core components
         self.feature_extractor = AudioFeatureExtractor()
         self.preprocessor = AudioPreprocessor()
-        self.context_manager = ContextManager()
         self.classifier = None
+        self.context_manager = ContextManager()
         
-        # Load pre-trained model if provided
-        if model_path and os.path.exists(f"{model_path}_main.pkl"):
-            self.load_model(model_path)
+        # For real-trained ensemble model
+        self.ensemble_model = None
+        self.scaler = None
+        self.label_encoder = None
+        self.model_loaded = False
+        
+        # Define standard classes for baby cries
+        self.classes = ['hunger', 'pain', 'discomfort', 'tiredness', 'normal']
         
         print("BabyWhisper Classifier initialized!")
         print("Ready to analyze baby cries with AI-powered insights.")
+    
+    def _setup_ensemble_classifier(self):
+        """Setup classifier interface for ensemble model."""
+        if self.ensemble_model and self.scaler and self.label_encoder:
+            # Create a wrapper for the ensemble model
+            class EnsembleWrapper:
+                def __init__(self, ensemble, scaler, label_encoder):
+                    self.ensemble = ensemble
+                    self.scaler = scaler
+                    self.label_encoder = label_encoder
+                    self.classes = label_encoder.classes_
+                    self.model_type = "ensemble"  # Add missing attribute
+                
+                def predict(self, X):
+                    X_scaled = self.scaler.transform(X)
+                    predictions_encoded = self.ensemble.predict(X_scaled)
+                    return self.label_encoder.inverse_transform(predictions_encoded)
+                
+                def predict_proba(self, X):
+                    X_scaled = self.scaler.transform(X)
+                    return self.ensemble.predict_proba(X_scaled)
+                
+                def classify_with_confidence(self, X):
+                    predictions = self.predict(X)
+                    probabilities = self.predict_proba(X)
+                    
+                    result = {
+                        'prediction': predictions[0],
+                        'confidence': float(np.max(probabilities[0])),
+                        'all_probabilities': {
+                            class_name: float(prob) 
+                            for class_name, prob in zip(self.classes, probabilities[0])
+                        }
+                    }
+                    return result
+            
+            # Set up the classifier interface
+            self.classifier = EnsembleWrapper(self.ensemble_model, self.scaler, self.label_encoder)
+            self.classes = self.classifier.classes
+            self.model_loaded = True
+            print("✅ Ensemble model wrapper created successfully!")
     
     def classify_cry(self, 
                     audio_path: str,
@@ -418,7 +459,7 @@ class BabyWhisperClassifier:
         return {
             'model_loaded': self.classifier is not None,
             'model_type': self.classifier.model_type if self.classifier else None,
-            'classes': self.classifier.classes if self.classifier else [],
+            'classes': list(self.classifier.classes) if self.classifier else [],
             'active_baby_profiles': len(self.context_manager.active_profiles),
             'baby_profiles': list(self.context_manager.active_profiles.keys()),
             'feature_extractor_ready': True,

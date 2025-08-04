@@ -53,6 +53,14 @@ class DataLoader:
                 "files": ["cry", "no_cry"],
                 "classes": ["cry", "no_cry"]
             },
+            "donateacry": {
+                "description": "Donate-a-Cry: Real baby cry dataset with different cry types",
+                "url": "https://raw.githubusercontent.com/gveres/donateacry-corpus/master/donateacry_corpus_compressed_mp3.tar.bz2",
+                "format": "tar",
+                "size_mb": 50,
+                "files": ["belly_pain", "burping", "discomfort", "hungry", "tired"],
+                "classes": ["discomfort", "hunger", "pain", "tiredness", "burping"]
+            },
             "infant_cry_classification": {
                 "description": "Synthetic infant cry classification dataset",
                 "url": "synthetic",
