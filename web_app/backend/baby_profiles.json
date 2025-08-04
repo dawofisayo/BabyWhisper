@@ -1,0 +1,52 @@
+{
+  "1f5531fb-8ce5-4230-90be-df8088ff221b": {
+    "baby_name": "Persistent Baby",
+    "age_months": 4,
+    "birth_date": null,
+    "last_feeding_time": null,
+    "last_nap_time": null,
+    "last_diaper_change": null,
+    "feeding_history": [],
+    "diaper_change_history": [],
+    "typical_feeding_interval_hours": 3.0,
+    "typical_nap_duration_hours": 2.0,
+    "comfort_preferences": {
+      "responds_to_rocking": true,
+      "responds_to_music": true,
+      "responds_to_white_noise": false,
+      "prefers_swaddling": true
+    },
+    "current_environment": {
+      "temperature": null,
+      "noise_level": "normal",
+      "lighting": "normal",
+      "people_present": 1
+    }
+  },
+  "b3533965-3c18-487f-8293-e06fb710cce7": {
+    "baby_name": "micah",
+    "age_months": 22,
+    "birth_date": "2025-08-26T00:00:00",
+    "last_feeding_time": "2025-08-04T19:56:31.111000",
+    "last_nap_time": null,
+    "last_diaper_change": null,
+    "feeding_history": [
+      "2025-08-04T19:56:31.111000"
+    ],
+    "diaper_change_history": [],
+    "typical_feeding_interval_hours": 3.0,
+    "typical_nap_duration_hours": 2.0,
+    "comfort_preferences": {
+      "responds_to_rocking": true,
+      "responds_to_music": true,
+      "responds_to_white_noise": false,
+      "prefers_swaddling": true
+    },
+    "current_environment": {
+      "temperature": null,
+      "noise_level": "normal",
+      "lighting": "normal",
+      "people_present": 1
+    }
+  }
+}

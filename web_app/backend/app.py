@@ -10,6 +10,8 @@ import os
 import sys
 import tempfile
 import uuid
+import json
+import pickle
 from datetime import datetime, timedelta
 import logging
 import traceback
@@ -35,7 +37,99 @@ logger = logging.getLogger(__name__)
 
 # Global BabyWhisper instance
 baby_whisper = None
-baby_profiles = {}  # Store baby profiles in memory (in production, use a database)
+baby_profiles = {}  # Store baby profiles in memory
+baby_profiles_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'baby_profiles.json')
+
+def load_baby_profiles():
+    """Load baby profiles from file."""
+    global baby_profiles
+    try:
+        if os.path.exists(baby_profiles_file):
+            with open(baby_profiles_file, 'r') as f:
+                profiles_data = json.load(f)
+                
+            for profile_id, profile_data in profiles_data.items():
+                # Recreate BabyProfile objects from saved data
+                profile = BabyProfile(
+                    baby_name=profile_data['baby_name'],
+                    age_months=profile_data.get('age_months', 0),
+                    birth_date=datetime.fromisoformat(profile_data['birth_date']) if profile_data.get('birth_date') else None
+                )
+                
+                # Restore timestamps
+                if profile_data.get('last_feeding_time'):
+                    profile.last_feeding_time = datetime.fromisoformat(profile_data['last_feeding_time'])
+                if profile_data.get('last_nap_time'):
+                    profile.last_nap_time = datetime.fromisoformat(profile_data['last_nap_time'])
+                if profile_data.get('last_diaper_change'):
+                    profile.last_diaper_change = datetime.fromisoformat(profile_data['last_diaper_change'])
+                
+                # Restore histories
+                if profile_data.get('feeding_history'):
+                    profile.feeding_history = [datetime.fromisoformat(t) for t in profile_data['feeding_history']]
+                if profile_data.get('diaper_change_history'):
+                    profile.diaper_change_history = [datetime.fromisoformat(t) for t in profile_data['diaper_change_history']]
+                
+                # Restore other attributes
+                profile.typical_feeding_interval_hours = profile_data.get('typical_feeding_interval_hours', 3.0)
+                profile.typical_nap_duration_hours = profile_data.get('typical_nap_duration_hours', 2.0)
+                profile.comfort_preferences = profile_data.get('comfort_preferences', {
+                    'responds_to_rocking': True,
+                    'responds_to_music': True,
+                    'responds_to_white_noise': False,
+                    'prefers_swaddling': True
+                })
+                profile.current_environment = profile_data.get('current_environment', {
+                    'temperature': None,
+                    'noise_level': 'normal',
+                    'lighting': 'normal',
+                    'people_present': 1
+                })
+                
+                baby_profiles[profile_id] = profile
+                
+            logger.info(f"Loaded {len(baby_profiles)} baby profiles from file")
+    except Exception as e:
+        logger.error(f"Error loading baby profiles: {e}")
+        baby_profiles = {}
+
+def save_baby_profiles():
+    """Save baby profiles to file."""
+    try:
+        logger.info(f"Saving {len(baby_profiles)} baby profiles to {baby_profiles_file}")
+        profiles_data = {}
+        for profile_id, profile in baby_profiles.items():
+            profile_data = {
+                'baby_name': profile.baby_name,
+                'age_months': profile.age_months,
+                'birth_date': profile.birth_date.isoformat() if profile.birth_date else None,
+                'last_feeding_time': profile.last_feeding_time.isoformat() if profile.last_feeding_time else None,
+                'last_nap_time': profile.last_nap_time.isoformat() if profile.last_nap_time else None,
+                'last_diaper_change': profile.last_diaper_change.isoformat() if profile.last_diaper_change else None,
+                'feeding_history': [t.isoformat() for t in profile.feeding_history],
+                'diaper_change_history': [t.isoformat() for t in profile.diaper_change_history],
+                'typical_feeding_interval_hours': profile.typical_feeding_interval_hours,
+                'typical_nap_duration_hours': profile.typical_nap_duration_hours,
+                'comfort_preferences': profile.comfort_preferences,
+                'current_environment': profile.current_environment
+            }
+            profiles_data[profile_id] = profile_data
+        
+        with open(baby_profiles_file, 'w') as f:
+            json.dump(profiles_data, f, indent=2)
+            
+        logger.info(f"Successfully saved {len(baby_profiles)} baby profiles to file")
+    except Exception as e:
+        logger.error(f"Error saving baby profiles: {e}")
+        logger.error(traceback.format_exc())
+        # Try to create directory if it doesn't exist
+        try:
+            os.makedirs(os.path.dirname(baby_profiles_file), exist_ok=True)
+            with open(baby_profiles_file, 'w') as f:
+                json.dump(profiles_data, f, indent=2)
+            logger.info(f"Successfully saved {len(baby_profiles)} baby profiles to file after creating directory")
+        except Exception as e2:
+            logger.error(f"Failed to save baby profiles even after creating directory: {e2}")
 
 def initialize_baby_whisper():
     """Initialize the BabyWhisper system with real-trained models."""
@@ -165,6 +259,9 @@ def create_baby():
         # Store in memory (in production, save to database)
         baby_profiles[profile_id] = profile
         
+        # Save to disk for persistence
+        save_baby_profiles()
+        
         logger.info(f"Created baby profile: {data['name']} (ID: {profile_id})")
         
         return jsonify({
@@ -216,6 +313,9 @@ def update_baby_context(profile_id):
             profile.diaper_change_history.append(diaper_time)
         
         logger.info(f"Updated context for baby: {profile.baby_name}")
+        
+        # Save to disk for persistence
+        save_baby_profiles()
         
         return jsonify({
             "message": "Baby context updated successfully",
@@ -356,6 +456,10 @@ def provide_feedback():
 if __name__ == '__main__':
     # For development
     logger.info("Starting BabyWhisper Web API in development mode...")
+    
+    # Load existing baby profiles from disk
+    load_baby_profiles()
+    
     initialize_baby_whisper()
     
     app.run(
