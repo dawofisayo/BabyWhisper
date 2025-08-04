@@ -87,6 +87,80 @@ Instead of just telling caregivers what the baby's cry likely means, BabyWhisper
 
 ## 🏗️ Architecture & Design Decisions
 
+### **System Architecture**
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────────┐
+│   Audio Input   │───▶│ Feature Extraction│───▶│   Ensemble Models   │
+│  (Baby Cry)     │    │  (293 features)   │    │  RF + SVM + MLP     │
+└─────────────────┘    └──────────────────┘    └─────────────────────┘
+                                                           │
+┌─────────────────┐    ┌──────────────────┐              │
+│ Smart Insights  │◀───│ Context Layer    │◀─────────────┘
+│ & Explanations  │    │ (Baby Profile +  │
+└─────────────────┘    │  Care History)   │
+                       └──────────────────┘
+```
+
+### **System Overview**
+BabyWhisper employs a modular, scalable architecture designed for real-world baby care applications. The system combines advanced audio processing, ensemble machine learning, and context-aware intelligence to deliver accurate, personalized insights.
+
+### **Core Design Principles**
+
+**1. Real-World Data First**
+- **Decision**: Train exclusively on real baby cry recordings
+- **Rationale**: Synthetic data doesn't capture authentic cry patterns
+- **Implementation**: 457 recordings from Donate-a-Cry corpus
+- **Result**: 83.7% accuracy on genuine baby cries
+
+**2. Ensemble Learning Strategy**
+- **Decision**: Combine multiple ML models instead of single model
+- **Rationale**: Different models excel at different audio patterns
+- **Implementation**: Random Forest + SVM + Multi-layer Perceptron
+- **Result**: Robust predictions across diverse cry types
+
+**3. Context-Aware Intelligence**
+- **Decision**: Integrate baby-specific context into predictions
+- **Rationale**: Same cry can mean different things based on timing/schedule
+- **Implementation**: Baby profiles with feeding/sleep/diaper history
+- **Result**: Personalized insights beyond basic classification
+
+**4. Modular Architecture**
+- **Decision**: Separate concerns into distinct modules
+- **Rationale**: Maintainability, testability, and extensibility
+- **Implementation**: Audio processing, ML models, context management
+- **Result**: Easy to enhance and debug individual components
+
+### **Technical Architecture Deep Dive**
+
+**Audio Processing Pipeline**
+```
+Raw Audio → Preprocessing → Feature Extraction → Model Input
+    ↓              ↓              ↓              ↓
+  WAV/MP3    Noise Removal   293 Features   Ensemble
+  Input      Normalization   (MFCC, Spec,   Prediction
+                            Temporal, F0)
+```
+
+**Context Intelligence System**
+- **Baby Profiles**: Individual characteristics and patterns
+- **Care History**: Feeding, sleep, diaper change tracking
+- **Time Awareness**: Time-of-day and schedule-based adjustments
+
+**Web Application Architecture**
+```
+Frontend (React) ←→ Backend (Flask) ←→ AI Engine (Python)
+     ↓                    ↓                    ↓
+  User Interface    REST API Endpoints   ML Models
+  Real-time Audio   Baby Management      Context Engine
+  Analytics Dash    File Upload          Audio Processing
+```
+
+### **Web Application Design**
+- **Frontend**: React.js with Tailwind CSS for modern, responsive interface
+- **Backend**: Flask API with CORS support for seamless frontend-backend communication
+- **State Management**: React hooks for efficient state handling and real-time updates
+- **Error Handling**: Comprehensive error handling with user-friendly messages
+
 ### **Machine Learning Approach**
 - **Ensemble Model**: Combines Random Forest, Support Vector Machine, and Multi-layer Perceptron for robust predictions
 - **Feature Engineering**: 293 carefully selected audio features including MFCC, temporal features, mel-spectrograms, and F0 analysis
@@ -99,11 +173,7 @@ Instead of just telling caregivers what the baby's cry likely means, BabyWhisper
 - **Real-time Processing**: Optimized for quick analysis without compromising accuracy
 - **Format Support**: Handles various audio formats and quality levels
 
-### **Web Application Design**
-- **Frontend**: React.js with Tailwind CSS for modern, responsive interface
-- **Backend**: Flask API with CORS support for seamless frontend-backend communication
-- **State Management**: React hooks for efficient state handling and real-time updates
-- **Error Handling**: Comprehensive error handling with user-friendly messages
+
 
 ### **Data Management**
 - **Baby Profiles**: JSON-based persistence with automatic loading/saving
@@ -112,6 +182,37 @@ Instead of just telling caregivers what the baby's cry likely means, BabyWhisper
 - **Scalable Architecture**: Modular design for easy feature additions
 
 ## 📊 Performance & Accuracy
+
+### **Current Implementation Status**
+
+**✅ Actually Implemented:**
+- **Modular Architecture**: Separate modules for audio processing, ML models, and context management
+- **Error Handling**: Comprehensive try-catch blocks with proper HTTP status codes
+- **Input Validation**: Basic audio file validation and error responses
+- **Fallback Mechanisms**: Ensemble voting system with multiple models (RF, SVM, MLP)
+- **Monitoring**: Comprehensive logging throughout the application
+- **File-based Persistence**: JSON storage for baby profiles with automatic loading/saving
+
+**🔄 In Development:**
+- **Database Integration**: Currently using file-based storage, database support planned
+- **Enhanced Validation**: More robust audio file processing and validation
+- **Production Deployment**: Currently development-focused, production optimizations needed
+
+### **Performance Considerations**
+
+**System Architecture**
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────────┐
+│   Audio Input   │───▶│ Feature Extraction│───▶│   Ensemble Models   │
+│  (Baby Cry)     │    │  (293 features)   │    │  RF + SVM + MLP     │
+└─────────────────┘    └──────────────────┘    └─────────────────────┘
+                                                           │
+┌─────────────────┐    ┌──────────────────┐              │
+│ Smart Insights  │◀───│ Context Layer    │◀─────────────┘
+│ & Explanations  │    │ (Baby Profile +  │
+└─────────────────┘    │  Care History)   │
+                       └──────────────────┘
+```
 
 ### **Model Performance**
 - **Overall Accuracy**: 83.7% on test data
@@ -127,12 +228,6 @@ Instead of just telling caregivers what the baby's cry likely means, BabyWhisper
 - **Processing Time**: ~0.8 seconds average inference time
 - **Memory Usage**: Optimized for web deployment
 
-### **Recent Improvements & Fixes**
-- **Label Encoding Fix**: Resolved 0.000 test accuracies by properly converting predictions back to original labels
-- **Feature Optimization**: Removed Chroma and Spectral features to focus on most effective 293 features
-- **Ensemble Stability**: Reverted from CNN hybrid to proven ensemble approach for reliability
-- **Context Manager**: Fixed dictionary/array handling for robust context integration
-- **Baby Profile Persistence**: Added file-based storage to prevent data loss on server restarts
 
 ## 📚 References & Scientific Foundation
 
@@ -252,17 +347,6 @@ python -m pytest tests/
 python -c "from src.models.model_trainer import ModelTrainer; trainer = ModelTrainer(); trainer.train_model(save_model=True)"
 ```
 
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
-
-### **Areas for Improvement**
-- Additional audio formats support
-- Mobile app development
-- Integration with baby monitors
-- Multi-language support
-- Advanced analytics and reporting
-
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
@@ -274,16 +358,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **scikit-learn**: Machine learning library
 - **librosa**: Audio processing library
 - **Tailwind CSS**: Styling framework
-
-## 📞 Support
-
-For questions, issues, or feature requests, please:
-1. Check the [Issues](https://github.com/dawofisayo/BabyWhisper/issues) page
-2. Create a new issue with detailed information
-3. Include audio samples (if relevant) and system information
-
----
-
-**Made with ❤️ for caregivers everywhere**
-
-*BabyWhisper empowers caregivers with AI-powered insights, reducing stress and improving care quality through intelligent baby cry interpretation.* 
