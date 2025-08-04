@@ -8,7 +8,7 @@ BabyWhisper doesn't just classify baby cries—it provides intelligent, context-
 
 - **🎯 Real Baby Cry Analysis**: Trained on 457 real baby cry recordings from the Donate-a-Cry dataset
 - **🧠 Multi-Model Intelligence**: Ensemble of Random Forest, SVM, and Neural Network classifiers
-- **🎵 323 Audio Features**: Advanced signal processing extracts comprehensive acoustic patterns
+- **🎵 293 Audio Features**: Advanced signal processing extracts comprehensive acoustic patterns
 - **🎯 83.7% Accuracy**: Realistic performance on real-world baby cry classification  
 - **🧐 Context-Aware Intelligence**: Considers feeding times, sleep patterns, and baby's schedule
 - **📈 Continuous Learning**: Adapts predictions based on parent feedback
@@ -21,7 +21,7 @@ BabyWhisper doesn't just classify baby cries—it provides intelligent, context-
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────────┐
 │   Audio Input   │───▶│ Feature Extraction│───▶│   Ensemble Models   │
-│  (Baby Cry)     │    │  (323 features)   │    │  RF + SVM + MLP     │
+│  (Baby Cry)     │    │  (293 features)   │    │  RF + SVM + MLP     │
 └─────────────────┘    └──────────────────┘    └─────────────────────┘
                                                            │
 ┌─────────────────┐    ┌──────────────────┐              │
@@ -69,18 +69,18 @@ BabyWhisper employs a **modular, scalable architecture** designed for real-world
 ```
 Raw Audio → Preprocessing → Feature Extraction → Model Input
     ↓              ↓              ↓              ↓
-  WAV/MP3    Noise Removal   323 Features   Ensemble
+  WAV/MP3    Noise Removal   293 Features   Ensemble
   Input      Normalization   (MFCC, Spec,   Prediction
                             Temporal, F0)
 ```
 
 #### **Machine Learning Stack**
-- **Feature Engineering**: 323 audio characteristics per sample
+- **Feature Engineering**: 293 audio characteristics per sample
 - **Model Ensemble**: 
-  - Random Forest (82.1% accuracy)
-  - Support Vector Machine (84.2% accuracy)  
-  - Multi-layer Perceptron (85.1% accuracy)
-  - Ensemble Voting (83.7% accuracy)
+  - Random Forest (79.3% test accuracy)
+  - Support Vector Machine (83.7% test accuracy)  
+  - Multi-layer Perceptron (79.3% test accuracy)
+  - Ensemble Voting (83.7% validation accuracy)
 - **Training Data**: 457 real baby cry recordings
 - **Validation**: Cross-validation with real-world test sets
 
@@ -101,17 +101,19 @@ Frontend (React) ←→ Backend (Flask) ←→ AI Engine (Python)
 
 ### **Key Design Decisions Explained**
 
-#### **Why 323 Audio Features?**
-- **Comprehensive Coverage**: MFCC, spectral, temporal, and F0 features
+#### **Why 293 Audio Features?**
+- **Optimized Coverage**: MFCC, mel-spectrograms, temporal, and F0 features
 - **Pattern Recognition**: Captures both frequency and time-domain patterns
 - **Robustness**: Multiple feature types handle different cry characteristics
 - **Validation**: Feature importance analysis guides selection
+- **Performance**: Balanced accuracy vs. computational efficiency
 
 #### **Why Ensemble Over Single Model?**
 - **Diversity**: Each model specializes in different audio patterns
 - **Reliability**: Reduces overfitting and improves generalization
 - **Performance**: Better accuracy than individual models
 - **Flexibility**: Easy to add/remove models as needed
+- **Real Results**: SVM (83.7%), RF (79.3%), MLP (79.3%) test accuracies
 
 #### **Why Context-Aware Predictions?**
 - **Real-World Accuracy**: Same cry means different things at different times
@@ -125,11 +127,28 @@ Frontend (React) ←→ Backend (Flask) ←→ AI Engine (Python)
 - **Scalability**: Can handle multiple users and babies
 - **Integration**: Easy to add features and connect to other systems
 
+### **Recent Improvements & Fixes**
+
+#### **Label Encoding Fix (Latest)**
+- **Issue**: Test accuracies showing 0.000 due to label encoding mismatch
+- **Solution**: Proper conversion between encoded and original labels
+- **Result**: All models now show realistic test accuracies (79.3% - 83.7%)
+
+#### **Feature Optimization**
+- **Removed**: Chroma and spectral features for better performance
+- **Kept**: MFCC, mel-spectrograms, temporal, and F0 features
+- **Result**: 293 optimized features with maintained accuracy
+
+#### **Ensemble Stability**
+- **Reverted**: From experimental CNN hybrid to proven ensemble
+- **Maintained**: Random Forest + SVM + MLP combination
+- **Result**: Stable 83.7% validation accuracy
+
 ### **Performance Considerations**
 
 #### **Real-Time Processing**
 - **Audio Duration**: Optimized for 3-second cry samples
-- **Feature Extraction**: Efficient 323-feature computation
+- **Feature Extraction**: Efficient 293-feature computation
 - **Model Inference**: Fast ensemble prediction
 - **Response Time**: <2 seconds end-to-end
 
@@ -168,7 +187,7 @@ Frontend (React) ←→ Backend (Flask) ←→ AI Engine (Python)
 BabyWhisper/
 ├── src/
 │   ├── audio_processing/          # Audio feature extraction & preprocessing
-│   │   ├── feature_extractor.py   # 323 audio features extraction
+│   │   ├── feature_extractor.py   # 293 audio features extraction
 │   │   └── preprocessor.py        # Audio cleaning & normalization
 │   ├── models/                    # Machine learning components
 │   │   ├── classifier.py          # Ensemble models (RF+SVM+MLP)
@@ -177,20 +196,33 @@ BabyWhisper/
 │   │   ├── baby_profile.py        # Individual baby profiles & patterns
 │   │   └── context_manager.py     # Smart prediction adjustments
 │   ├── utils/                     # Utilities & evaluation
-│   │   ├── data_loader.py         # Dataset management & synthetic data
+│   │   ├── data_loader.py         # Dataset management & real data loading
 │   │   └── evaluation.py          # Performance metrics & reporting
 │   └── main.py                    # Main BabyWhisper interface
-├── notebooks/
-│   └── demo_notebook.ipynb        # Complete development journey
-├── data/
+├── web_app/                       # Web application
+│   ├── frontend/                  # React.js frontend
+│   │   ├── src/
+│   │   │   ├── pages/             # Dashboard, Analytics, Baby Profiles
+│   │   │   ├── components/        # Reusable UI components
+│   │   │   └── utils/             # Frontend utilities
+│   │   └── public/                # Static assets
+│   └── backend/                   # Flask API backend
+│       ├── app.py                 # Main Flask application
+│       └── routes/                # API endpoint definitions
+├── tests/                         # Comprehensive test suite
+│   ├── test_audio_processing.py   # Audio feature extraction tests
+│   ├── test_models.py             # ML model tests
+│   ├── test_context.py            # Context management tests
+│   ├── test_web_app.py            # API endpoint tests
+│   ├── test_integration.py        # End-to-end system tests
+│   └── run_tests.py               # Test runner
+├── data/                          # Dataset storage
+│   └── donateacry_corpus_cleaned_and_updated_data/  # Real baby cry dataset
 ├── models/                        # Trained model storage
-├── demo scripts/
-│   ├── example_usage.py           # Full system demonstration
-│   ├── simple_demo.py             # Quick feature showcase
-│   ├── quick_context_demo.py      # Context intelligence demo
-│   └── demo_context_awareness.py  # Advanced context testing
+├── notebooks/                     # Jupyter notebooks for development
 ├── requirements.txt               # Python dependencies
-└── README.md
+├── .gitignore                     # Git ignore rules
+└── README.md                      # This file
 ```
 
 ## 🚀 Quick Start
@@ -202,14 +234,32 @@ BabyWhisper/
 git clone https://github.com/dawofisayo/BabyWhisper.git
 cd BabyWhisper
 
-# Install dependencies
+# Install Python dependencies
 pip install -r requirements.txt
 
-# Test installation
-python test_installation.py
+# Install frontend dependencies
+cd web_app/frontend
+npm install
+cd ../..
 ```
 
-### Basic Usage
+### Running the Web Application
+
+```bash
+# Start the backend server
+cd web_app/backend
+python app.py
+
+# In another terminal, start the frontend
+cd web_app/frontend
+npm start
+```
+
+The web application will be available at:
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:5001
+
+### Basic Usage (Python API)
 
 ```python
 from src.main import BabyWhisperClassifier
@@ -240,46 +290,45 @@ result = baby_whisper.classify_cry(
     baby_profile=baby_profile
 )
 
-print(f"Prediction: {result['final_prediction']}")
-print(f"Confidence: {result['final_confidence']:.2f}")
-print(f"Explanation: {result['explanation']}")
+print(f"Prediction: {result['prediction']}")
+print(f"Confidence: {result['confidence']:.2f}")
 print(f"Recommendations: {result['recommendations']}")
 ```
 
-## 🎬 Demo Scripts
+## 🧪 Testing
 
-Run these scripts to see BabyWhisper in action:
+Run the comprehensive test suite:
 
 ```bash
-# Complete system demonstration
-python example_usage.py
+# Run all tests
+python tests/run_tests.py
 
-# Quick feature showcase
-python simple_demo.py
-
-# Context intelligence demo
-python quick_context_demo.py
+# Run specific test categories
+python -m pytest tests/test_audio_processing.py
+python -m pytest tests/test_models.py
+python -m pytest tests/test_integration.py
 ```
 
 ## 🎯 Performance Metrics
 
 Our AI achieves impressive results on real baby cry data:
 
-| Model | Accuracy | Precision | Recall | F1-Score |
-|-------|----------|-----------|---------|----------|
-| **Ensemble** | **83.7%** | **70.0%** | **83.7%** | **76.3%** |
-| SVM | 83.7% | 70.0% | 83.7% | 76.3% |
-| MLP Neural Network | 82.6% | 70.0% | 82.6% | 76.9% |
-| Random Forest | 80.4% | 70.0% | 80.4% | 75.1% |
+| Model | Test Accuracy | Validation Accuracy | Precision | Recall | F1-Score |
+|-------|---------------|-------------------|-----------|---------|----------|
+| **Ensemble** | **83.7%** | **83.7%** | **83.2%** | **83.7%** | **83.4%** |
+| SVM | 83.7% | 83.7% | 83.2% | 83.7% | 83.4% |
+| MLP Neural Network | 79.3% | 80.4% | 79.2% | 79.3% | 79.2% |
+| Random Forest | 79.3% | 83.7% | 79.2% | 79.3% | 79.2% |
 
 *Trained and tested on 457 real baby cry recordings from the Donate-a-Cry dataset*
 
 ### Technical Specifications
-- **Audio Features**: 323 characteristics per cry sample
-- **Processing Speed**: Real-time capable
+- **Audio Features**: 293 characteristics per cry sample
+- **Processing Speed**: Real-time capable (<2 seconds)
 - **Model Types**: Ensemble (Random Forest + SVM + Multi-layer Perceptron)
 - **Context Factors**: Feeding history, sleep patterns, age, time of day
 - **Supported Audio**: WAV, MP3, FLAC formats
+- **Web Interface**: React.js frontend with Flask API backend
 
 ## 🧪 Development Journey
 
@@ -312,7 +361,7 @@ Track patterns, identify trends, and gain insights into your baby's needs and de
 
 ## 🔬 Technical Innovation
 
-- **Feature Engineering**: 323 sophisticated audio characteristics
+- **Feature Engineering**: 293 sophisticated audio characteristics
 - **Ensemble Learning**: Multiple ML models for robust predictions  
 - **Context Integration**: Baby-specific pattern recognition
 - **Real-time Processing**: Optimized for immediate insights
