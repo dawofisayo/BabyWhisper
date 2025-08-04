@@ -54,85 +54,6 @@ class ModelTrainer:
         self.spectrograms = None
         self.feature_names = None
         
-    def create_synthetic_dataset(self, n_samples: int = 1000) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Create a synthetic dataset for demonstration purposes.
-        
-        Args:
-            n_samples: Number of samples to generate
-            
-        Returns:
-            Tuple of (features, labels)
-        """
-        print("Creating synthetic baby cry dataset...")
-        
-        np.random.seed(42)
-        classes = ['hunger', 'pain', 'discomfort', 'tiredness', 'normal']
-        
-        # Get actual number of features from feature extractor
-        # Create a dummy audio file to determine feature count
-        import tempfile
-        import soundfile as sf
-        
-        # Create a temporary audio sample to get feature count
-        temp_audio = np.random.normal(0, 0.1, 22050 * 3)  # 3 seconds at 22050 Hz
-        with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_file:
-            sf.write(temp_file.name, temp_audio, 22050)
-            dummy_features = self.feature_extractor.extract_feature_vector(temp_file.name)
-            n_features = len(dummy_features)
-            os.unlink(temp_file.name)
-        
-        print(f"Using {n_features} features for synthetic dataset")
-        
-        # Generate features with different characteristics for each class
-        features = []
-        labels = []
-        
-        for i in range(n_samples):
-            # Randomly select a class
-            class_idx = np.random.randint(0, len(classes))
-            class_name = classes[class_idx]
-            
-            # Generate features based on class characteristics
-            if class_name == 'hunger':
-                # Hunger cries tend to be rhythmic and persistent
-                feature_vector = np.random.normal(0.3, 0.2, n_features)
-                feature_vector[0:13] = np.random.normal(0.5, 0.3, 13)  # MFCC characteristics
-                feature_vector[26:32] = np.random.normal(0.6, 0.2, 6)  # Spectral features
-                
-            elif class_name == 'pain':
-                # Pain cries are often sudden and intense
-                feature_vector = np.random.normal(0.7, 0.3, n_features)
-                feature_vector[0:13] = np.random.normal(0.8, 0.2, 13)  # High MFCC values
-                feature_vector[32:37] = np.random.normal(0.9, 0.1, 5)  # High temporal features
-                
-            elif class_name == 'discomfort':
-                # Discomfort cries are moderate intensity
-                feature_vector = np.random.normal(0.4, 0.25, n_features)
-                feature_vector[0:13] = np.random.normal(0.4, 0.25, 13)
-                feature_vector[37:49] = np.random.normal(0.5, 0.2, 12)  # Chroma features
-                
-            elif class_name == 'tiredness':
-                # Tired cries are often whimpering and lower energy
-                feature_vector = np.random.normal(0.2, 0.15, n_features)
-                feature_vector[0:13] = np.random.normal(0.3, 0.2, 13)
-                # Use last 4 features for energy stats (dynamic)
-                feature_vector[-4:] = np.random.normal(0.2, 0.1, 4)  # Lower energy stats
-                
-            else:  # normal
-                # Normal sounds (not crying)
-                feature_vector = np.random.normal(0.1, 0.1, n_features)
-                feature_vector[0:13] = np.random.normal(0.1, 0.15, 13)
-            
-            # Add some noise to make it more realistic
-            noise = np.random.normal(0, 0.05, n_features)
-            feature_vector += noise
-            
-            features.append(feature_vector)
-            labels.append(class_name)
-        
-        return np.array(features), np.array(labels)
-    
     def load_dataset_from_audio(self, audio_dir: str, 
                                labels_file: Optional[str] = None) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -504,12 +425,11 @@ class ModelTrainer:
         
         return X_train, X_test, X_val, y_train, y_test, y_val
     
-    def train_model(self, use_synthetic_data: bool = False, save_model: bool = True) -> Dict:
+    def train_model(self, save_model: bool = True) -> Dict:
         """
-        Train the baby cry classification model using real or synthetic data.
+        Train the baby cry classification model using real data.
         
         Args:
-            use_synthetic_data: If True, use synthetic data. If False, try to load real data first.
             save_model: Whether to save the trained model
             
         Returns:
@@ -517,21 +437,14 @@ class ModelTrainer:
         """
         print("🚀 Starting BabyWhisper model training...")
         
-        # Load data - prefer real data over synthetic
-        if not use_synthetic_data:
-            print("🎯 Attempting to load REAL baby cry data...")
-            try:
-                features, labels = self.load_donateacry_dataset()
-                data_source = "Real Donate-a-Cry Dataset"
-            except Exception as e:
-                print(f"❌ Failed to load real data: {e}")
-                print("🔄 Falling back to synthetic data...")
-                features, labels = self.create_synthetic_dataset()
-                data_source = "Synthetic Dataset (Fallback)"
-        else:
-            print("🔬 Using synthetic data for testing...")
-            features, labels = self.create_synthetic_dataset()
-            data_source = "Synthetic Dataset (Manual Override)"
+        # Load real data
+        print("🎯 Loading REAL baby cry data...")
+        try:
+            features, labels = self.load_donateacry_dataset()
+            data_source = "Real Donate-a-Cry Dataset"
+        except Exception as e:
+            print(f"❌ Failed to load real data: {e}")
+            raise ValueError("Real dataset not available. Please ensure the Donate-a-Cry dataset is properly set up.")
         
         # Rest of training logic remains the same
         X_train, X_test, X_val, y_train, y_test, y_val = self.prepare_data(features, labels)
@@ -674,17 +587,22 @@ class ModelTrainer:
         """Quick training for demonstration purposes."""
         print("🚀 Quick Demo Training...")
         
-        # Generate small synthetic dataset
-        features, labels = self.create_synthetic_dataset(samples_per_class=20)
+        # Load real dataset
+        try:
+            features, labels = self.load_donateacry_dataset()
+            print(f"✅ Loaded {len(features)} samples from real dataset")
+        except Exception as e:
+            print(f"❌ Failed to load real dataset: {e}")
+            raise ValueError("Real dataset not available for demo training.")
         
         # Prepare data
-        data_splits = self.prepare_data(features, labels)
+        X_train, X_test, X_val, y_train, y_test, y_val = self.prepare_data(features, labels)
         
         # Train model
-        classifier = self.train_model(model_type='ensemble')
+        results = self.train_ensemble(X_train, y_train, X_val, y_val)
         
         # Evaluate
-        results = self.evaluate_model(data_splits['X_test'], data_splits['y_test'])
+        final_results = self.evaluate_models(X_test, y_test)
         
-        print(f"🎯 Demo training completed! Accuracy: {results['accuracy']:.3f}")
-        return classifier 
+        print(f"🎯 Demo training completed! Accuracy: {final_results['ensemble']['test_accuracy']:.3f}")
+        return results 

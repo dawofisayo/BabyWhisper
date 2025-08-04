@@ -60,14 +60,6 @@ class DataLoader:
                 "size_mb": 50,
                 "files": ["belly_pain", "burping", "discomfort", "hungry", "tired"],
                 "classes": ["discomfort", "hunger", "pain", "tiredness", "burping"]
-            },
-            "infant_cry_classification": {
-                "description": "Synthetic infant cry classification dataset",
-                "url": "synthetic",
-                "format": "generated",
-                "size_mb": 5,
-                "files": ["hunger", "pain", "discomfort", "tiredness", "normal"],
-                "classes": ["hunger", "pain", "discomfort", "tiredness", "normal"]
             }
         }
         
@@ -90,9 +82,6 @@ class DataLoader:
         
         dataset_info = datasets[dataset_name]
         output_dir = os.path.join(self.data_dir, "raw", dataset_name)
-        
-        if dataset_info["url"] == "synthetic":
-            return self._create_synthetic_audio_dataset(output_dir, dataset_info["classes"])
         
         print(f"Downloading {dataset_name}...")
         
@@ -128,102 +117,6 @@ class DataLoader:
         """Extract tar file to output directory."""
         with tarfile.open(tar_path, 'r:*') as tar_ref:
             tar_ref.extractall(output_dir)
-    
-    def _create_synthetic_audio_dataset(self, output_dir: str, classes: List[str]) -> str:
-        """
-        Create a synthetic audio dataset for demonstration.
-        
-        Args:
-            output_dir: Output directory
-            classes: List of classes to create
-            
-        Returns:
-            Path to created dataset
-        """
-        print("Creating synthetic audio dataset...")
-        
-        try:
-            import librosa
-            import soundfile as sf
-        except ImportError:
-            print("librosa and soundfile required for synthetic dataset creation")
-            return output_dir
-        
-        os.makedirs(output_dir, exist_ok=True)
-        
-        # Create class directories
-        for class_name in classes:
-            class_dir = os.path.join(output_dir, class_name)
-            os.makedirs(class_dir, exist_ok=True)
-        
-        # Generate synthetic audio samples
-        sample_rate = 22050
-        duration = 3.0  # 3 seconds
-        samples_per_class = 20
-        
-        for class_name in classes:
-            class_dir = os.path.join(output_dir, class_name)
-            
-            for i in range(samples_per_class):
-                # Generate synthetic audio based on class
-                audio = self._generate_synthetic_cry(class_name, sample_rate, duration)
-                
-                # Save audio file
-                filename = f"{class_name}_{i:03d}.wav"
-                filepath = os.path.join(class_dir, filename)
-                sf.write(filepath, audio, sample_rate)
-        
-        # Create labels CSV
-        self._create_labels_csv(output_dir, classes, samples_per_class)
-        
-        print(f"Synthetic dataset created with {len(classes)} classes, {samples_per_class} samples each")
-        return output_dir
-    
-    def _generate_synthetic_cry(self, class_name: str, sample_rate: int, duration: float) -> np.ndarray:
-        """Generate synthetic cry audio based on class characteristics."""
-        t = np.linspace(0, duration, int(sample_rate * duration))
-        
-        if class_name == 'hunger':
-            # Rhythmic crying pattern
-            freq = 300 + 50 * np.sin(2 * np.pi * 0.5 * t)  # Varying frequency
-            audio = np.sin(2 * np.pi * freq * t) * np.exp(-t * 0.3)
-            # Add rhythm
-            rhythm = (np.sin(2 * np.pi * 2 * t) > 0).astype(float)
-            audio *= rhythm
-            
-        elif class_name == 'pain':
-            # Sharp, intense cry
-            freq = 400 + 100 * np.random.random(len(t))
-            audio = np.sin(2 * np.pi * freq * t) * (1 - np.exp(-t * 2))
-            # Add sharp onset
-            audio *= (1 + 2 * np.exp(-t * 5))
-            
-        elif class_name == 'discomfort':
-            # Moderate intensity, irregular
-            freq = 250 + 30 * np.sin(2 * np.pi * 0.3 * t + np.random.random() * 2 * np.pi)
-            audio = np.sin(2 * np.pi * freq * t) * (0.7 + 0.3 * np.random.random(len(t)))
-            
-        elif class_name == 'tiredness':
-            # Lower intensity, whimpering
-            freq = 200 + 20 * np.sin(2 * np.pi * 0.2 * t)
-            audio = np.sin(2 * np.pi * freq * t) * np.exp(-t * 0.5) * 0.6
-            # Add breaks
-            breaks = (np.sin(2 * np.pi * 1.5 * t + np.pi/4) > 0.5).astype(float)
-            audio *= breaks
-            
-        else:  # normal or other
-            # Quiet background noise
-            audio = 0.1 * np.random.normal(0, 1, len(t))
-        
-        # Add some background noise
-        noise = 0.05 * np.random.normal(0, 1, len(t))
-        audio += noise
-        
-        # Normalize
-        if np.max(np.abs(audio)) > 0:
-            audio = audio / np.max(np.abs(audio)) * 0.8
-        
-        return audio.astype(np.float32)
     
     def _create_labels_csv(self, output_dir: str, classes: List[str], samples_per_class: int):
         """Create a CSV file with labels for the dataset."""

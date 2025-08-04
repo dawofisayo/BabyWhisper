@@ -60,11 +60,11 @@ const Analytics = () => {
     },
     {
       label: 'Audio Features',
-      value: '323',
+      value: '293',
       icon: Zap,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
-      description: 'Sophisticated audio characteristics analyzed'
+      description: 'Optimized audio characteristics analyzed'
     },
     {
       label: 'Active Profiles',

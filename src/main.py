@@ -257,15 +257,13 @@ class BabyWhisperClassifier:
     
     def train_new_model(self, 
                        dataset_path: Optional[str] = None,
-                       model_type: str = 'ensemble',
-                       use_synthetic_data: bool = True) -> Dict:
+                       model_type: str = 'ensemble') -> Dict:
         """
         Train a new classification model.
         
         Args:
             dataset_path: Path to training dataset (optional)
             model_type: Type of model to train
-            use_synthetic_data: Whether to use synthetic data for demo
             
         Returns:
             Training results
@@ -274,12 +272,13 @@ class BabyWhisperClassifier:
         
         trainer = ModelTrainer()
         
-        if use_synthetic_data or dataset_path is None:
-            # Use synthetic data for demonstration
-            print("Using synthetic dataset for training...")
+        # Use real dataset
+        if dataset_path is None:
+            # Use default Donate-a-Cry dataset
+            print("Using default Donate-a-Cry dataset for training...")
             classifier = trainer.quick_demo_training()
         else:
-            # Load real dataset
+            # Load real dataset from specified path
             data_loader = DataLoader()
             file_paths, labels = data_loader.load_dataset_from_directory(dataset_path)
             
@@ -480,8 +479,8 @@ def create_demo_setup() -> BabyWhisperClassifier:
     # Initialize classifier
     classifier = BabyWhisperClassifier()
     
-    # Train a demo model with synthetic data
-    classifier.train_new_model(use_synthetic_data=True)
+    # Train a demo model with real data
+    classifier.train_new_model()
     
     # Create a sample baby profile
     profile_id = classifier.create_baby_profile(

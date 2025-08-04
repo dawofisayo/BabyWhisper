@@ -49,41 +49,26 @@ class AudioFeatureExtractor:
         features['mfcc_mean'] = np.mean(mfcc, axis=1)
         features['mfcc_std'] = np.std(mfcc, axis=1)
         
-        # 2. Spectral Features
-        spectral_centroids = librosa.feature.spectral_centroid(y=y, sr=sr)[0]
-        features['spectral_centroid_mean'] = np.mean(spectral_centroids)
-        features['spectral_centroid_std'] = np.std(spectral_centroids)
-        
-        spectral_rolloff = librosa.feature.spectral_rolloff(y=y, sr=sr)[0]
-        features['spectral_rolloff_mean'] = np.mean(spectral_rolloff)
-        features['spectral_rolloff_std'] = np.std(spectral_rolloff)
-        
-        # 3. Zero Crossing Rate
+        # 2. Temporal Features
         zcr = librosa.feature.zero_crossing_rate(y)[0]
         features['zcr_mean'] = np.mean(zcr)
         features['zcr_std'] = np.std(zcr)
         
-        # 4. Root Mean Square Energy
         rms = librosa.feature.rms(y=y)[0]
         features['rms_mean'] = np.mean(rms)
         features['rms_std'] = np.std(rms)
         
-        # 5. Tempo and Rhythm
+        # 3. Tempo and Rhythm
         tempo, beats = librosa.beat.beat_track(y=y, sr=sr)
         features['tempo'] = tempo
         
-        # 6. Chroma Features
-        chroma = librosa.feature.chroma_stft(y=y, sr=sr)
-        features['chroma_mean'] = np.mean(chroma, axis=1)
-        features['chroma_std'] = np.std(chroma, axis=1)
-        
-        # 7. Mel-scaled Spectrogram
+        # 4. Mel-scaled Spectrogram
         mel_spec = librosa.feature.melspectrogram(y=y, sr=sr)
         features['mel_spectrogram'] = mel_spec
         features['mel_spec_mean'] = np.mean(mel_spec, axis=1)
         features['mel_spec_std'] = np.std(mel_spec, axis=1)
         
-        # 8. Fundamental Frequency (F0)
+        # 5. Fundamental Frequency (F0)
         f0 = librosa.piptrack(y=y, sr=sr, threshold=0.1)[0]
         f0_values = f0[f0 > 0]
         if len(f0_values) > 0:
@@ -93,12 +78,7 @@ class AudioFeatureExtractor:
             features['f0_mean'] = 0
             features['f0_std'] = 0
         
-        # 9. Spectral Bandwidth
-        spec_bw = librosa.feature.spectral_bandwidth(y=y, sr=sr)[0]
-        features['spectral_bandwidth_mean'] = np.mean(spec_bw)
-        features['spectral_bandwidth_std'] = np.std(spec_bw)
-        
-        # 10. Audio statistics
+        # 6. Audio statistics
         features['duration'] = len(y) / sr
         features['energy'] = np.sum(y ** 2)
         features['max_amplitude'] = np.max(np.abs(y))
@@ -127,24 +107,6 @@ class AudioFeatureExtractor:
         feature_vector.extend(mfcc_mean.tolist())
         feature_vector.extend(mfcc_std.tolist())
         
-        # Add spectral features (ensure scalars)
-        spectral_features = [
-            features['spectral_centroid_mean'],
-            features['spectral_centroid_std'],
-            features['spectral_rolloff_mean'],
-            features['spectral_rolloff_std'],
-            features['spectral_bandwidth_mean'],
-            features['spectral_bandwidth_std']
-        ]
-        # Convert to scalars if they're arrays
-        for feat in spectral_features:
-            if hasattr(feat, 'item'):
-                feature_vector.append(feat.item())
-            elif np.isscalar(feat):
-                feature_vector.append(float(feat))
-            else:
-                feature_vector.append(float(np.mean(feat)))
-        
         # Add temporal features (ensure scalars)
         temporal_features = [
             features['zcr_mean'],
@@ -161,12 +123,6 @@ class AudioFeatureExtractor:
                 feature_vector.append(float(feat))
             else:
                 feature_vector.append(float(np.mean(feat)))
-        
-        # Add chroma features (ensure they're flattened)
-        chroma_mean = np.array(features['chroma_mean']).flatten()
-        chroma_std = np.array(features['chroma_std']).flatten()
-        feature_vector.extend(chroma_mean.tolist())
-        feature_vector.extend(chroma_std.tolist())
         
         # Add mel spectrogram statistics (ensure they're flattened)
         mel_mean = np.array(features['mel_spec_mean']).flatten()
@@ -241,23 +197,23 @@ class AudioFeatureExtractor:
         librosa.display.specshow(mel_spec_db, y_axis='mel', x_axis='time', sr=sr, ax=axes[1, 0])
         axes[1, 0].set_title('Mel Spectrogram')
         
-        # Spectral Centroid
-        spectral_centroids = librosa.feature.spectral_centroid(y=y, sr=sr)[0]
-        frames = range(len(spectral_centroids))
-        t = librosa.frames_to_time(frames)
-        axes[1, 1].plot(t, spectral_centroids)
-        axes[1, 1].set_title('Spectral Centroid')
-        axes[1, 1].set_xlabel('Time (s)')
-        axes[1, 1].set_ylabel('Hz')
-        
         # Zero Crossing Rate
         zcr = librosa.feature.zero_crossing_rate(y)[0]
         frames = range(len(zcr))
         t = librosa.frames_to_time(frames)
-        axes[1, 2].plot(t, zcr)
-        axes[1, 2].set_title('Zero Crossing Rate')
+        axes[1, 1].plot(t, zcr)
+        axes[1, 1].set_title('Zero Crossing Rate')
+        axes[1, 1].set_xlabel('Time (s)')
+        axes[1, 1].set_ylabel('Rate')
+        
+        # RMS Energy
+        rms = librosa.feature.rms(y=y)[0]
+        frames = range(len(rms))
+        t = librosa.frames_to_time(frames)
+        axes[1, 2].plot(t, rms)
+        axes[1, 2].set_title('RMS Energy')
         axes[1, 2].set_xlabel('Time (s)')
-        axes[1, 2].set_ylabel('Rate')
+        axes[1, 2].set_ylabel('Energy')
         
         plt.tight_layout()
         
@@ -274,25 +230,12 @@ class AudioFeatureExtractor:
             feature_names.append(f'mfcc_{i}_mean')
         for i in range(self.n_mfcc):
             feature_names.append(f'mfcc_{i}_std')
-            
-        # Spectral features
-        feature_names.extend([
-            'spectral_centroid_mean', 'spectral_centroid_std',
-            'spectral_rolloff_mean', 'spectral_rolloff_std',
-            'spectral_bandwidth_mean', 'spectral_bandwidth_std'
-        ])
         
         # Temporal features
         feature_names.extend([
             'zcr_mean', 'zcr_std', 'rms_mean', 'rms_std', 'tempo'
         ])
         
-        # Chroma features (12 semitones)
-        for i in range(12):
-            feature_names.append(f'chroma_{i}_mean')
-        for i in range(12):
-            feature_names.append(f'chroma_{i}_std')
-            
         # Mel spectrogram features (128 bands by default)
         for i in range(128):
             feature_names.append(f'mel_{i}_mean')

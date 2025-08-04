@@ -77,7 +77,7 @@ def initialize_baby_whisper():
         
         # Last resort: Train new model
         logger.info("No models found, training new model...")
-        baby_whisper.train_new_model(use_synthetic_data=False)  # Try real data first
+        baby_whisper.train_new_model()  # Use real data
         logger.info("Model training completed!")
         
         logger.info("BabyWhisper system initialized successfully!")
