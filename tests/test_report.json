@@ -1,0 +1,121 @@
+{
+  "timestamp": "2025-08-04T12:27:33.545030",
+  "duration_seconds": 2.24,
+  "tests_run": 64,
+  "tests_failed": 16,
+  "tests_errored": 11,
+  "tests_skipped": 0,
+  "success_rate": 57.81,
+  "failures": [
+    {
+      "test": "test_get_context_probabilities (test_context.TestBabyProfile.test_get_context_probabilities)",
+      "message": "Traceback (most recent call last):\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/test_context.py\", line 164, in test_get_context_probabilities\n    self.assertGreater(probabilities['tiredness'], 0)\nAssertionError: 0.0 not greater than 0\n"
+    },
+    {
+      "test": "test_is_likely_tired (test_context.TestBabyProfile.test_is_likely_tired)",
+      "message": "Traceback (most recent call last):\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/test_context.py\", line 127, in test_is_likely_tired\n    self.assertTrue(self.baby_profile.is_likely_tired())\nAssertionError: False is not true\n"
+    },
+    {
+      "test": "test_save_and_load_profile (test_context.TestBabyProfile.test_save_and_load_profile)",
+      "message": "Traceback (most recent call last):\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/test_context.py\", line 204, in test_save_and_load_profile\n    self.assertEqual(len(loaded_profile.cry_history),\nAssertionError: 0 != 1\n"
+    },
+    {
+      "test": "test_update_sleep (test_context.TestBabyProfile.test_update_sleep)",
+      "message": "Traceback (most recent call last):\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/test_context.py\", line 52, in test_update_sleep\n    self.assertEqual(self.baby_profile.last_nap_time, sleep_end)\nAssertionError: datetime.datetime(2025, 8, 4, 10, 27, 32, 769930) != datetime.datetime(2025, 8, 4, 12, 27, 32, 769931)\n"
+    },
+    {
+      "test": "test_get_recommendations (test_context.TestContextManager.test_get_recommendations)",
+      "message": "Traceback (most recent call last):\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/test_context.py\", line 314, in test_get_recommendations\n    self.assertIn('Create calm environment', recommendations)\nAssertionError: 'Create calm environment' not found in 'Look for other sleep cues'\n"
+    },
+    {
+      "test": "test_complete_classification_pipeline (test_integration.TestCompleteSystemIntegration.test_complete_classification_pipeline)",
+      "message": "Traceback (most recent call last):\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/test_integration.py\", line 90, in test_complete_classification_pipeline\n    self.assertIn('probabilities', result)\nAssertionError: 'probabilities' not found in {'prediction': 'hunger', 'confidence': 0.85, 'all_probabilities': {'hunger': 0.85, 'pain': 0.1, 'discomfort': 0.05, 'tiredness': 0.0, 'normal': 0.0}, 'is_confident': True, 'uncertainty_flag': False, 'explanation': 'High confidence prediction: hunger'}\n"
+    },
+    {
+      "test": "test_data_persistence_and_recovery (test_integration.TestCompleteSystemIntegration.test_data_persistence_and_recovery)",
+      "message": "Traceback (most recent call last):\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/test_integration.py\", line 249, in test_data_persistence_and_recovery\n    self.assertEqual(len(loaded_profile.cry_history),\nAssertionError: 0 != 1\n"
+    },
+    {
+      "test": "test_classify_with_confidence (test_models.TestBabyCryClassifier.test_classify_with_confidence)",
+      "message": "Traceback (most recent call last):\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/test_models.py\", line 98, in test_classify_with_confidence\n    self.assertIn('probabilities', result)\nAssertionError: 'probabilities' not found in {'prediction': 'tiredness', 'confidence': 0.4, 'all_probabilities': {'hunger': 0.1, 'pain': 0.2, 'discomfort': 0.3, 'tiredness': 0.4, 'normal': 0.0}, 'is_confident': False, 'uncertainty_flag': True, 'explanation': 'Uncertain prediction. Most likely: tiredness (0.40), also possible: discomfort (0.30)', 'alternative_prediction': 'discomfort', 'alternative_confidence': 0.3}\n"
+    },
+    {
+      "test": "test_baby_insights_endpoint (test_web_app.TestWebAppAPI.test_baby_insights_endpoint)",
+      "message": "Traceback (most recent call last):\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/test_web_app.py\", line 228, in test_baby_insights_endpoint\n    self.assertIn('recommendations', data)\nAssertionError: 'recommendations' not found in {'age_months': 6, 'baby_name': 'Test Baby', 'context_probabilities': {'discomfort': 0.2, 'hunger': 0.3, 'normal': 0.0, 'pain': 0.0, 'tiredness': 0.0}, 'current_status': {'likely_hungry': True, 'likely_tired': False, 'likely_uncomfortable': True, 'time_awake': None, 'time_since_diaper_change': None, 'time_since_feeding': None}}\n"
+    },
+    {
+      "test": "test_classify_audio_endpoint (test_web_app.TestWebAppAPI.test_classify_audio_endpoint)",
+      "message": "Traceback (most recent call last):\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/test_web_app.py\", line 125, in test_classify_audio_endpoint\n    self.assertEqual(response.status_code, 200)\nAssertionError: 500 != 200\n"
+    },
+    {
+      "test": "test_classify_audio_with_baby_profile (test_web_app.TestWebAppAPI.test_classify_audio_with_baby_profile)",
+      "message": "Traceback (most recent call last):\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/test_web_app.py\", line 152, in test_classify_audio_with_baby_profile\n    self.assertEqual(response.status_code, 200)\nAssertionError: 500 != 200\n"
+    },
+    {
+      "test": "test_feedback_endpoint (test_web_app.TestWebAppAPI.test_feedback_endpoint)",
+      "message": "Traceback (most recent call last):\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/test_web_app.py\", line 172, in test_feedback_endpoint\n    self.assertEqual(response.status_code, 200)\nAssertionError: 400 != 200\n"
+    },
+    {
+      "test": "test_missing_audio_file (test_web_app.TestWebAppAPI.test_missing_audio_file)",
+      "message": "Traceback (most recent call last):\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/test_web_app.py\", line 200, in test_missing_audio_file\n    self.assertEqual(response.status_code, 400)\nAssertionError: 500 != 400\n"
+    },
+    {
+      "test": "test_system_status_endpoint (test_web_app.TestWebAppAPI.test_system_status_endpoint)",
+      "message": "Traceback (most recent call last):\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/test_web_app.py\", line 60, in test_system_status_endpoint\n    self.assertEqual(response.status_code, 200)\nAssertionError: 500 != 200\n"
+    },
+    {
+      "test": "test_complete_workflow (test_web_app.TestWebAppIntegration.test_complete_workflow)",
+      "message": "Traceback (most recent call last):\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/test_web_app.py\", line 287, in test_complete_workflow\n    self.assertEqual(feedback_response.status_code, 200)\nAssertionError: 400 != 200\n"
+    },
+    {
+      "test": "test_error_handling (test_web_app.TestWebAppIntegration.test_error_handling)",
+      "message": "Traceback (most recent call last):\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/test_web_app.py\", line 295, in test_error_handling\n    self.assertEqual(response.status_code, 400)\nAssertionError: 500 != 400\n"
+    }
+  ],
+  "errors": [
+    {
+      "test": "test_add_cry_record (test_context.TestBabyProfile.test_add_cry_record)",
+      "message": "Traceback (most recent call last):\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/test_context.py\", line 179, in test_add_cry_record\n    self.assertEqual(record['cry_type'], cry_type)\n                     ~~~~~~^^^^^^^^^^^^\nKeyError: 'cry_type'\n"
+    },
+    {
+      "test": "test_learn_from_feedback (test_context.TestContextManager.test_learn_from_feedback)",
+      "message": "Traceback (most recent call last):\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/test_context.py\", line 340, in test_learn_from_feedback\n    self.assertEqual(record['cry_type'], 'hunger')\n                     ~~~~~~^^^^^^^^^^^^\nKeyError: 'cry_type'\n"
+    },
+    {
+      "test": "test_context_aware_prediction_workflow (test_integration.TestCompleteSystemIntegration.test_context_aware_prediction_workflow)",
+      "message": "Traceback (most recent call last):\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/test_integration.py\", line 95, in test_context_aware_prediction_workflow\n    hungry_baby = BabyProfile(\"Hungry Baby\", 6)\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/../src/context/baby_profile.py\", line 26, in __init__\n    self.age_months = age_months or self._calculate_age_months()\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/../src/context/baby_profile.py\", line 67, in _calculate_age_months\n    age_days = (today - self.birth_date).days\n                ~~~~~~^~~~~~~~~~~~~~~~~\nTypeError: unsupported operand type(s) for -: 'datetime.datetime' and 'int'\n"
+    },
+    {
+      "test": "test_learning_from_feedback_workflow (test_integration.TestCompleteSystemIntegration.test_learning_from_feedback_workflow)",
+      "message": "Traceback (most recent call last):\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/test_integration.py\", line 177, in test_learning_from_feedback_workflow\n    patterns = self.baby_profile.analyze_patterns()\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: 'BabyProfile' object has no attribute 'analyze_patterns'\n"
+    },
+    {
+      "test": "test_performance_and_scalability (test_integration.TestCompleteSystemIntegration.test_performance_and_scalability)",
+      "message": "Traceback (most recent call last):\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/test_integration.py\", line 212, in test_performance_and_scalability\n    profile = BabyProfile(f\"Baby {i}\", 6)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/../src/context/baby_profile.py\", line 26, in __init__\n    self.age_months = age_months or self._calculate_age_months()\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/../src/context/baby_profile.py\", line 67, in _calculate_age_months\n    age_days = (today - self.birth_date).days\n                ~~~~~~^~~~~~~~~~~~~~~~~\nTypeError: unsupported operand type(s) for -: 'datetime.datetime' and 'int'\n"
+    },
+    {
+      "test": "test_real_world_scenarios (test_integration.TestCompleteSystemIntegration.test_real_world_scenarios)",
+      "message": "Traceback (most recent call last):\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/test_integration.py\", line 265, in test_real_world_scenarios\n    newborn = BabyProfile(\"Newborn\", 1)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/../src/context/baby_profile.py\", line 26, in __init__\n    self.age_months = age_months or self._calculate_age_months()\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/../src/context/baby_profile.py\", line 67, in _calculate_age_months\n    age_days = (today - self.birth_date).days\n                ~~~~~~^~~~~~~~~~~~~~~~~\nTypeError: unsupported operand type(s) for -: 'datetime.datetime' and 'int'\n"
+    },
+    {
+      "test": "test_predict (test_models.TestBabyCryClassifier.test_predict)",
+      "message": "Traceback (most recent call last):\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/test_models.py\", line 82, in test_predict\n    result = self.classifier.predict(self.test_features)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/../src/models/classifier.py\", line 189, in predict\n    raise ValueError(\"Model must be trained before making predictions\")\nValueError: Model must be trained before making predictions\n"
+    },
+    {
+      "test": "test_predict_proba (test_models.TestBabyCryClassifier.test_predict_proba)",
+      "message": "Traceback (most recent call last):\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/test_models.py\", line 69, in test_predict_proba\n    result = self.classifier.predict_proba(self.test_features)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/../src/models/classifier.py\", line 215, in predict_proba\n    raise ValueError(\"Model must be trained before making predictions\")\nValueError: Model must be trained before making predictions\n"
+    },
+    {
+      "test": "test_evaluate_models (test_models.TestModelTrainer.test_evaluate_models)",
+      "message": "Traceback (most recent call last):\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/test_models.py\", line 173, in test_evaluate_models\n    results = self.trainer.evaluate_models(models, self.X, self.y)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: ModelTrainer.evaluate_models() takes 3 positional arguments but 4 were given\n"
+    },
+    {
+      "test": "test_save_models (test_models.TestModelTrainer.test_save_models)",
+      "message": "Traceback (most recent call last):\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/test_models.py\", line 188, in test_save_models\n    self.trainer.save_models(models, scaler, label_encoder, 'test_models')\nTypeError: ModelTrainer.save_models() takes from 1 to 2 positional arguments but 5 were given\n"
+    },
+    {
+      "test": "test_train_ensemble (test_models.TestModelTrainer.test_train_ensemble)",
+      "message": "Traceback (most recent call last):\n  File \"/Users/damilolaawofisayo/Desktop/coding/LullaSense/tests/test_models.py\", line 148, in test_train_ensemble\n    ensemble = self.trainer.train_ensemble(self.X, self.y)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: ModelTrainer.train_ensemble() missing 2 required positional arguments: 'X_val' and 'y_val'\n"
+    }
+  ]
+}

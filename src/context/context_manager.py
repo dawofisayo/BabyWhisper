@@ -123,7 +123,9 @@ class ContextManager:
         # Check feeding status
         time_since_feeding = profile.get_time_since_feeding()
         if time_since_feeding is not None:
-            if profile.is_likely_hungry():
+            if time_since_feeding == 0.0:
+                active_factors.append("Just fed")
+            elif profile.is_likely_hungry():
                 active_factors.append(f"Last fed {time_since_feeding:.1f} hours ago (typical interval: {profile.typical_feeding_interval_hours:.1f}h)")
             else:
                 active_factors.append(f"Recently fed {time_since_feeding:.1f} hours ago")
@@ -131,7 +133,9 @@ class ContextManager:
         # Check sleep status
         time_awake = profile.get_time_awake()
         if time_awake is not None:
-            if profile.is_likely_tired():
+            if time_awake == 0.0:
+                active_factors.append("Just woke up")
+            elif profile.is_likely_tired():
                 active_factors.append(f"Awake for {time_awake:.1f} hours (may be tired)")
             else:
                 active_factors.append(f"Awake for {time_awake:.1f} hours")
@@ -139,7 +143,9 @@ class ContextManager:
         # Check diaper status
         time_since_diaper = profile.get_time_since_diaper_change()
         if time_since_diaper is not None:
-            if profile.is_likely_uncomfortable():
+            if time_since_diaper == 0.0:
+                active_factors.append("Diaper just changed")
+            elif profile.is_likely_uncomfortable():
                 active_factors.append(f"Diaper changed {time_since_diaper:.1f} hours ago (may need changing)")
             else:
                 active_factors.append(f"Diaper recently changed ({time_since_diaper:.1f}h ago)")

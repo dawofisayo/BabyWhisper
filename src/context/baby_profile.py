@@ -192,25 +192,41 @@ class BabyProfile:
     def get_time_since_feeding(self) -> Optional[float]:
         """Get hours since last feeding."""
         if self.last_feeding_time:
-            return (datetime.now() - self.last_feeding_time).total_seconds() / 3600
+            time_diff = (datetime.now() - self.last_feeding_time).total_seconds() / 3600
+            # Handle negative differences (when the time is slightly in the future due to timing/timezone issues)
+            if time_diff <= 0:
+                return 0.0  # Just fed
+            return time_diff
         return None
     
     def get_time_since_nap(self) -> Optional[float]:
         """Get hours since last nap."""
         if self.last_nap_time:
-            return (datetime.now() - self.last_nap_time).total_seconds() / 3600
+            time_diff = (datetime.now() - self.last_nap_time).total_seconds() / 3600
+            # Handle negative differences (when the time is slightly in the future due to timing/timezone issues)
+            if time_diff <= 0:
+                return 0.0  # Just woke up
+            return time_diff
         return None
     
     def get_time_since_diaper_change(self) -> Optional[float]:
         """Get hours since last diaper change."""
         if self.last_diaper_change:
-            return (datetime.now() - self.last_diaper_change).total_seconds() / 3600
+            time_diff = (datetime.now() - self.last_diaper_change).total_seconds() / 3600
+            # Handle negative differences (when the time is slightly in the future due to timing/timezone issues)
+            if time_diff <= 0:
+                return 0.0  # Just changed
+            return time_diff
         return None
     
     def get_time_awake(self) -> Optional[float]:
         """Get hours since last wake up."""
         if self.last_wake_time:
-            return (datetime.now() - self.last_wake_time).total_seconds() / 3600
+            time_diff = (datetime.now() - self.last_wake_time).total_seconds() / 3600
+            # Handle negative differences (when the time is slightly in the future due to timing/timezone issues)
+            if time_diff <= 0:
+                return 0.0  # Just woke up
+            return time_diff
         return None
     
     def is_likely_hungry(self) -> bool:
