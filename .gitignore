@@ -155,31 +155,41 @@ cython_debug/
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
 #  be added to the global gitignore or merged into this project gitignore.  For a PyCharm
-#  project, it is recommended to use the PyCharm gitignore file.
-.idea/
+#  project, uncomment the following line:
+#.idea/
 
-# VSCode
-.vscode/
-
-# Temporary files
-*.tmp
-*.temp
-temp_*.wav
-temp_*.mp3
-
-# Model files (large binary files)
+# Model files
 *.pkl
 *.joblib
 *.h5
 *.hdf5
 
-# Data files (potentially large)
+# Data directories
 data/raw/
 data/processed/
-*.wav
-*.mp3
-*.flac
-*.aiff
+data/samples/
+
+# Node.js dependencies
+node_modules/
+package-lock.json
+
+# React build files
+build/
+dist/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
 # OS generated files
 .DS_Store
@@ -188,12 +198,4 @@ data/processed/
 .Spotlight-V100
 .Trashes
 ehthumbs.db
-Thumbs.db
-
-# BabyWhisper specific
-models/baby_cry_classifier*
-models/*.pkl
-models/*.csv
-temp_*.wav
-*.png
-plots/*.png 
+Thumbs.db 
