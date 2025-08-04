@@ -131,9 +131,9 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <MetricCard
           title="Model Accuracy"
-          value="85.2%"
-          change="+1.5%"
-          changeType="positive"
+          value="83.7%"
+          change="+0.0%"
+          changeType="neutral"
           icon={TrendingUp}
         />
         {stats.map((stat, index) => {

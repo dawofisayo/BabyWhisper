@@ -96,11 +96,11 @@ class BabyWhisperClassifier:
             raise ValueError("No model loaded. Please train a model or load a pre-trained one.")
         
         try:
-            # Extract both features and spectrograms for hybrid model
-            features, spectrograms = self.feature_extractor.extract_features_and_spectrograms(audio_path)
+            # Extract features
+            features = self.feature_extractor.extract_feature_vector(audio_path)
             
-            # Get base prediction from the classifier (which now handles hybrid logic)
-            base_result = self.classifier.classify_with_confidence(features.reshape(1, -1), spectrograms.reshape(1, spectrograms.shape[0], spectrograms.shape[1], 1))
+            # Get base prediction from the classifier
+            base_result = self.classifier.classify_with_confidence(features.reshape(1, -1))
             
             # Apply context if a baby profile is provided
             if baby_profile:

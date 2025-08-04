@@ -50,19 +50,19 @@ const Analytics = () => {
   }
 
   const systemMetrics = {
-    modelAccuracy: "85.2%",
+    modelAccuracy: "83.7%",
     audioFeatures: "293",
-    modelType: "Hybrid (Ensemble + CNN)",
+    modelType: "Ensemble (RF, SVM, MLP)",
     trainingSamples: "457",
     inferenceTime: "0.8s",
     contextAwareness: "Enabled"
   };
 
   const modelPerformance = {
-    accuracy: 0.852,
-    precision: 0.847,
-    recall: 0.852,
-    f1Score: 0.849,
+    accuracy: 0.837,
+    precision: 0.832,
+    recall: 0.837,
+    f1Score: 0.834,
     confusionMatrix: [
       [15, 2, 1, 0],
       [3, 68, 1, 2],
@@ -79,7 +79,7 @@ const Analytics = () => {
   ];
 
   const descriptions = {
-    modelArchitecture: "Hybrid ensemble combining Random Forest, SVM, MLP, and CNN with spectrogram analysis for enhanced audio pattern recognition.",
+    modelArchitecture: "Ensemble classifier combining Random Forest, Support Vector Machine, and Multi-layer Perceptron for robust baby cry classification.",
     featureExtraction: "Advanced audio processing pipeline extracting 293 features including MFCC coefficients, temporal features, mel-spectrograms, and fundamental frequency analysis.",
     contextIntegration: "Intelligent context-aware predictions using baby profiles, feeding schedules, and environmental factors to improve classification accuracy.",
     realTimeAnalysis: "Real-time audio processing with 0.8-second inference time, enabling immediate cry classification and actionable recommendations."
